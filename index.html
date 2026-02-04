@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>RxPlain (MVP)</title>
+  <style>
+    :root{
+      --bg:#0b1220; --card:#111a2e; --muted:#9fb0d0; --text:#eaf0ff;
+      --accent:#6aa6ff; --ok:#4ade80; --warn:#fbbf24; --danger:#fb7185;
+      --border:rgba(255,255,255,.10);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:linear-gradient(180deg,var(--bg),#070b14);color:var(--text)}
+    header{padding:24px 16px;border-bottom:1px solid var(--border)}
+    header h1{margin:0;font-size:18px;letter-spacing:.2px}
+    header p{margin:8px 0 0;color:var(--muted);font-size:13px;max-width:980px}
+    main{max-width:1100px;margin:0 auto;padding:16px;display:grid;gap:16px}
+    .grid{display:grid;grid-template-columns:1fr;gap:16px}
+    @media(min-width:980px){.grid{grid-template-columns:1fr 1fr}}
+    .card{background:rgba(17,26,46,.82);border:1px solid var(--border);border-radius:16px;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    .card h2{margin:0 0 12px;font-size:15px}
+    label{display:block;font-size:12px;color:var(--muted);margin:10px 0 6px}
+    input,select,textarea{
+      width:100%;padding:10px 10px;border-radius:12px;border:1px solid var(--border);
+      background:#0b1326;color:var(--text);outline:none;
+    }
+    textarea{min-height:88px;resize:vertical;line-height:1.35}
+    .row{display:grid;grid-template-columns:1fr;gap:10px}
+    @media(min-width:560px){.row{grid-template-columns:1fr 1fr}}
+    .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+    button{
+      padding:10px 12px;border-radius:12px;border:1px solid var(--border);
+      background:rgba(106,166,255,.15);color:var(--text);cursor:pointer;
+      font-weight:600
+    }
+    button.secondary{background:rgba(255,255,255,.06)}
+    button.danger{background:rgba(251,113,133,.12)}
+    .pill{display:inline-flex;gap:8px;align-items:center;font-size:12px;color:var(--muted)}
+    .pill b{color:var(--text)}
+    .tiny{font-size:11px;color:var(--muted)}
+    hr{border:0;border-top:1px solid var(--border);margin:12px 0}
+    /* OUTPUT (infografía) */
+    #outputWrap{display:none}
+    .infografia{background:#ffffff;color:#0b1220;border-radius:18px;padding:18px}
+    .infografia h3{margin:0 0 6px;font-size:18px}
+    .infografia .sub{margin:0 0 14px;color:#334155;font-size:13px}
+    .blocks{display:grid;grid-template-columns:1fr;gap:12px}
+    @media(min-width:820px){.blocks{grid-template-columns:1fr 1fr}}
+    .block{
+      border:1px solid rgba(2,6,23,.15);border-radius:16px;padding:14px;min-height:120px;
+      display:flex;gap:12px;align-items:flex-start
+    }
+    .icon{
+      width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+      background:rgba(2,6,23,.06);font-size:18px;flex:0 0 40px
+    }
+    .block h4{margin:0 0 6px;font-size:14px}
+    .block ul{margin:0;padding-left:18px}
+    .block li{margin:6px 0;font-size:13px;line-height:1.25}
+    .tagrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    .tag{font-size:11px;padding:4px 8px;border-radius:999px;border:1px solid rgba(2,6,23,.18);color:#0f172a;background:rgba(2,6,23,.03)}
+    .tag.ok{border-color:rgba(22,163,74,.35);background:rgba(22,163,74,.06)}
+    .tag.warn{border-color:rgba(245,158,11,.35);background:rgba(245,158,11,.08)}
+    .tag.danger{border-color:rgba(225,29,72,.35);background:rgba(225,29,72,.06)}
+    .foot{margin-top:12px;font-size:11px;color:#475569}
+    .twoCols{display:grid;grid-template-columns:1fr;gap:12px}
+    @media(min-width:820px){.twoCols{grid-template-columns:1fr 1fr}}
+    .kbd{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;padding:2px 6px;border:1px solid rgba(255,255,255,.18);border-radius:8px;color:var(--muted)}
+    .notice{border-left:3px solid rgba(106,166,255,.65);padding:10px 12px;background:rgba(106,166,255,.08);border-radius:12px;color:var(--muted);font-size:12px}
+  </style>
+</head>
+<body>
+<header>
+  <h1>RxPlain (MVP) · Traducción farmacoterapéutica a paciente</h1>
+  <p>
+    Pega datos de ficha técnica (o tus extractos) para <b>un tratamiento completo</b> y genera una “infografía” modular con 5 bloques.
+    <span class="kbd">Sin APIs</span> · <span class="kbd">Sin pago</span> · <span class="kbd">HTML local / GitHub Pages</span>
+  </p>
+</header>
+
+<main class="grid">
+  <section class="card">
+    <h2>1) Perfil del paciente</h2>
+    <div class="row">
+      <div>
+        <label>Edad</label>
+        <select id="age">
+          <option value="joven">Joven</option>
+          <option value="adulto" selected>Adulto</option>
+          <option value="mayor">Mayor</option>
+        </select>
+      </div>
+      <div>
+        <label>Tipo de proceso</label>
+        <select id="course">
+          <option value="agudo">Agudo</option>
+          <option value="cronico" selected>Crónico</option>
+        </select>
+      </div>
+      <div>
+        <label>Alfabetización en salud</label>
+        <select id="lit">
+          <option value="baja">Baja</option>
+          <option value="media" selected>Media</option>
+          <option value="alta">Alta</option>
+        </select>
+      </div>
+      <div>
+        <label>Contexto</label>
+        <select id="ctx">
+          <option value="general" selected>General</option>
+          <option value="laboral">Laboral activo</option>
+          <option value="cuidador">Cuidador</option>
+          <option value="jubilado">Jubilado</option>
+        </select>
+      </div>
+    </div>
+    <label>Objetivo educativo (1 frase)</label>
+    <input id="goal" placeholder="Ej.: Integrar el tratamiento en rutina diaria y reconocer señales de alarma."/>
+    <div class="notice" style="margin-top:12px">
+      Consejo: no pegues la ficha técnica entera si no hace falta; pega <b>posología</b>, <b>alertas clave</b> y <b>EA relevantes</b>.
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>2) Tratamiento completo</h2>
+    <p class="tiny">Añade medicamentos uno a uno. Para MVP, usamos 3–6 fármacos como tope razonable.</p>
+
+    <div class="twoCols">
+      <div>
+        <label>Nombre del medicamento</label>
+        <input id="m_name" placeholder="Ej.: atorvastatina"/>
+      </div>
+      <div>
+        <label>Indicación principal (en este paciente)</label>
+        <input id="m_ind" placeholder="Ej.: bajar colesterol y reducir riesgo cardiovascular"/>
+      </div>
+      <div>
+        <label>Cómo se toma (posología / instrucciones)</label>
+        <input id="m_dose" placeholder="Ej.: 1 vez al día, por la noche, con o sin comida"/>
+      </div>
+      <div>
+        <label>Mensaje “clave” (beneficio esperado en una frase)</label>
+        <input id="m_benefit" placeholder="Ej.: ayuda a prevenir infartos y ictus a largo plazo"/>
+      </div>
+    </div>
+
+    <label>Efectos adversos (solo los relevantes; 3–6 bullets)</label>
+    <textarea id="m_ae" placeholder="- Dolor muscular leve al inicio&#10;- Molestias digestivas"></textarea>
+
+    <label>Cuándo avisar (2–4 bullets, señales de alarma reales)</label>
+    <textarea id="m_warn" placeholder="- Dolor muscular intenso + fiebre&#10;- Ictericia"></textarea>
+
+    <label>Notas/precauciones o interacciones (opc.)</label>
+    <textarea id="m_notes" placeholder="Ej.: evitar pomelo / avisar si toma macrólidos..."></textarea>
+
+    <div class="btns">
+      <button id="addMed">Añadir medicamento</button>
+      <button class="secondary" id="loadExample">Cargar ejemplo RCV</button>
+      <button class="danger" id="clearAll">Borrar todo</button>
+    </div>
+
+    <hr>
+    <div class="pill">Medicamentos añadidos: <b id="count">0</b></div>
+    <div id="medList" class="tiny" style="margin-top:8px;line-height:1.5"></div>
+
+    <div class="btns">
+      <button id="generate">Generar infografía</button>
+      <button class="secondary" id="print" disabled>Imprimir / Guardar PDF</button>
+    </div>
+  </section>
+
+  <section class="card" id="outputWrap">
+    <h2>3) Salida (infografía)</h2>
+    <div class="tiny">Tip: usa “Imprimir / Guardar PDF” para obtener un PDF desde el navegador.</div>
+    <hr>
+
+    <div id="output" class="infografia" aria-label="Infografía RxPlain"></div>
+  </section>
+</main>
+
+<script>
+  const meds = [];
+
+  const $ = (id)=>document.getElementById(id);
+
+  function sanitizeLines(text){
+    return (text||"")
+      .split("\n")
+      .map(s=>s.trim())
+      .filter(Boolean)
+      .slice(0, 8);
+  }
+
+  function addMedication(obj){
+    meds.push(obj);
+    renderMedList();
+  }
+
+  function renderMedList(){
+    $("count").textContent = meds.length.toString();
+    $("medList").innerHTML = meds.map((m,i)=>`• [${i+1}] <b>${escapeHtml(m.name)}</b> — ${escapeHtml(m.dose||"")}`).join("<br>");
+  }
+
+  function escapeHtml(str){
+    return (str||"").replace(/[&<>"']/g, (c)=>({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    }[c]));
+  }
+
+  function resetMedInputs(){
+    ["m_name","m_ind","m_dose","m_benefit","m_ae","m_warn","m_notes"].forEach(id=>$(id).value="");
+    $("m_name").focus();
+  }
+
+  function computeRegimenSummary(meds){
+    // heurística simple: agrupar por momentos (mañana/noche/comida) si el usuario lo menciona
+    const times = { mañana:0, noche:0, comida:0, "a la misma hora":0, "según necesidad":0, otro:0 };
+    meds.forEach(m=>{
+      const t=(m.dose||"").toLowerCase();
+      if (t.includes("mañ")) times.mañana++;
+      else if (t.includes("noche") || t.includes("cena")) times.noche++;
+      else if (t.includes("comida") || t.includes("desay") || t.includes("almuerzo")) times.comida++;
+      else if (t.includes("misma hora") || t.includes("cada día")) times["a la misma hora"]++;
+      else if (t.includes("si precisa") || t.includes("según necesidad") || t.includes("prn")) times["según necesidad"]++;
+      else times.otro++;
+    });
+    const active = Object.entries(times).filter(([k,v])=>v>0 && k!=="otro");
+    const moments = active.length ? active.map(([k,v])=>k).join(" + ") : "1–2 momentos del día (según rutina)";
+    return { moments, times };
+  }
+
+  function pickTopMessages(meds){
+    // Regla MVP: máximo 3 mensajes críticos del tratamiento completo
+    // Priorización basada en: presencia de warnings; y cronicidad
+    const scored = meds.map(m=>{
+      let s=0;
+      if ((m.warn||[]).length) s+=3;
+      if ((m.notes||[]).length) s+=1;
+      if ((m.ae||[]).length) s+=1;
+      // si el beneficio es muy claro, suma algo (señal de fármaco "clave")
+      if ((m.benefit||"").length>20) s+=1;
+      return {m, s};
+    }).sort((a,b)=>b.s-a.s);
+    return scored.slice(0,3).map(x=>x.m);
+  }
+
+  function buildOutput(){
+    const age = $("age").value, course = $("course").value, lit = $("lit").value, ctx = $("ctx").value;
+    const goal = $("goal").value.trim();
+
+    const regimen = computeRegimenSummary(meds);
+    const top = pickTopMessages(meds);
+
+    const title = "Tu tratamiento, explicado de forma clara";
+    const subtitle = [
+      course==="cronico" ? "Tratamiento crónico" : "Tratamiento para un proceso agudo",
+      `Alfabetización: ${lit}`,
+      `Contexto: ${ctx}`
+    ].join(" · ");
+
+    // Bloque 1: Para qué sirve tu tratamiento (resumen)
+    const forWhat = meds
+      .map(m=>m.indication ? `${m.name}: ${m.indication}` : `${m.name}`)
+      .slice(0,6);
+
+    // Bloque 2: Cómo tomarlo sin complicarte
+    const howTo = [
+      `Intenta integrarlo en: ${regimen.moments}.`,
+      "Si olvidas una dosis, no dupliques la siguiente sin consultar.",
+      course==="cronico" ? "La regularidad es más importante que hacerlo “perfecto”." : "Completa la duración indicada, aunque mejores."
+    ];
+
+    // Bloque 3: Qué es normal notar (agregado de AEs frecuentes)
+    const normals = [];
+    meds.forEach(m=>{
+      (m.ae||[]).slice(0,3).forEach(ae=>normals.push(`${m.name}: ${ae}`));
+    });
+    const normalFinal = normals.length ? normals.slice(0,8) : ["Si notas molestias leves al inicio, suele ser transitorio."];
+
+    // Bloque 4: Cuándo avisar (agregado de warnings)
+    const alerts = [];
+    meds.forEach(m=>{
+      (m.warn||[]).slice(0,3).forEach(w=>alerts.push(`${m.name}: ${w}`));
+    });
+    const alertFinal = alerts.length ? alerts.slice(0,8) : ["Si aparece un síntoma intenso o persistente, consulta."];
+
+    // Bloque 5: Consejo del farmacéutico (personalizable)
+    const advice = [];
+    if (goal) advice.push(goal);
+    advice.push("Lleva una lista actualizada de tus medicamentos y compártela en cada visita sanitaria.");
+    if (lit==="baja") advice.push("Si algo no te queda claro, pregunta: es normal necesitar repetirlo.");
+    if (ctx==="laboral") advice.push("Si trabajas a turnos, elige una “ancla” diaria (comida principal o higiene).");
+
+    // Tags (máximo 6)
+    const tags = [];
+    tags.push(course==="cronico" ? {t:"Crónico", cls:"ok"} : {t:"Agudo", cls:"ok"});
+    tags.push({t:`${meds.length} fármacos`, cls:""});
+    if (alerts.length) tags.push({t:"Alertas presentes", cls:"danger"});
+    if (normals.length) tags.push({t:"Efectos esperables", cls:"warn"});
+    tags.push({t:"Material para paciente", cls:""});
+    tags.push({t:"No sustituye consulta", cls:""});
+
+    const topMsgs = top.map(m=>{
+      const w = (m.warn||[])[0];
+      const b = (m.benefit||"");
+      if (w) return `Prioridad: <b>${escapeHtml(m.name)}</b> — vigilar: ${escapeHtml(w)}`;
+      if (b) return `Clave: <b>${escapeHtml(m.name)}</b> — ${escapeHtml(b)}`;
+      return `Clave: <b>${escapeHtml(m.name)}</b>`;
+    });
+
+    const html = `
+      <h3>${title}</h3>
+      <p class="sub">${escapeHtml(subtitle)}</p>
+
+      <div class="tagrow">
+        ${tags.slice(0,6).map(x=>`<span class="tag ${x.cls||""}">${escapeHtml(x.t)}</span>`).join("")}
+      </div>
+
+      <div style="margin-top:12px;border:1px solid rgba(2,6,23,.12);border-radius:14px;padding:10px 12px;background:rgba(2,6,23,.03)">
+        <div style="font-size:12px;color:#0f172a;margin-bottom:6px"><b>Mensajes prioritarios (máx. 3)</b></div>
+        <ul style="margin:0;padding-left:18px">
+          ${topMsgs.length ? topMsgs.map(x=>`<li style="font-size:12px;margin:6px 0">${x}</li>`).join("") : `<li style="font-size:12px;margin:6px 0">Integra el tratamiento en una rutina estable.</li>`}
+        </ul>
+      </div>
+
+      <div class="blocks" style="margin-top:12px">
+
+        <div class="block">
+          <div class="icon">🎯</div>
+          <div>
+            <h4>¿Para qué sirve tu tratamiento?</h4>
+            <ul>
+              ${forWhat.map(x=>`<li>${escapeHtml(x)}</li>`).join("")}
+            </ul>
+          </div>
+        </div>
+
+        <div class="block">
+          <div class="icon">🕒</div>
+          <div>
+            <h4>¿Cómo tomarlo sin complicarte?</h4>
+            <ul>
+              ${howTo.map(x=>`<li>${escapeHtml(x)}</li>`).join("")}
+            </ul>
+          </div>
+        </div>
+
+        <div class="block">
+          <div class="icon">🙂</div>
+          <div>
+            <h4>¿Qué es normal notar?</h4>
+            <ul>
+              ${normalFinal.map(x=>`<li>${escapeHtml(x)}</li>`).join("")}
+            </ul>
+          </div>
+        </div>
+
+        <div class="block">
+          <div class="icon">🚨</div>
+          <div>
+            <h4>¿Cuándo avisar?</h4>
+            <ul>
+              ${alertFinal.map(x=>`<li>${escapeHtml(x)}</li>`).join("")}
+            </ul>
+          </div>
+        </div>
+
+        <div class="block" style="grid-column:1/-1">
+          <div class="icon">💡</div>
+          <div>
+            <h4>Consejo del farmacéutico</h4>
+            <ul>
+              ${advice.slice(0,6).map(x=>`<li>${escapeHtml(x)}</li>`).join("")}
+            </ul>
+          </div>
+        </div>
+
+      </div>
+
+      <p class="foot">
+        Este material es informativo y está adaptado al perfil indicado. No sustituye la consulta con profesionales sanitarios.
+      </p>
+    `;
+    return html;
+  }
+
+  $("addMed").addEventListener("click", ()=>{
+    const name = $("m_name").value.trim();
+    if (!name) { alert("Falta el nombre del medicamento."); return; }
+
+    addMedication({
+      name,
+      indication: $("m_ind").value.trim(),
+      dose: $("m_dose").value.trim(),
+      benefit: $("m_benefit").value.trim(),
+      ae: sanitizeLines($("m_ae").value),
+      warn: sanitizeLines($("m_warn").value),
+      notes: sanitizeLines($("m_notes").value)
+    });
+    resetMedInputs();
+  });
+
+  $("generate").addEventListener("click", ()=>{
+    if (meds.length===0){ alert("Añade al menos 1 medicamento."); return; }
+    $("output").innerHTML = buildOutput();
+    $("outputWrap").style.display = "block";
+    $("print").disabled = false;
+    $("outputWrap").scrollIntoView({behavior:"smooth", block:"start"});
+  });
+
+  $("print").addEventListener("click", ()=>{
+    // Imprime solo la infografía
+    const content = $("output").outerHTML;
+    const w = window.open("", "_blank");
+    w.document.write(`
+      <html><head><title>RxPlain - PDF</title>
+      <meta charset="utf-8"/>
+      <meta name="viewport" content="width=device-width,initial-scale=1"/>
+      <style>body{margin:0;padding:18px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#f1f5f9}
+      .infografia{background:#fff;border-radius:18px;padding:18px}
+      .blocks{display:grid;grid-template-columns:1fr;gap:12px}
+      @media(min-width:820px){.blocks{grid-template-columns:1fr 1fr}}
+      .block{border:1px solid rgba(2,6,23,.15);border-radius:16px;padding:14px;display:flex;gap:12px;align-items:flex-start}
+      .icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:rgba(2,6,23,.06);font-size:18px;flex:0 0 40px}
+      h3{margin:0 0 6px;font-size:18px} .sub{margin:0 0 14px;color:#334155;font-size:13px}
+      ul{margin:0;padding-left:18px} li{margin:6px 0;font-size:13px;line-height:1.25}
+      .tagrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+      .tag{font-size:11px;padding:4px 8px;border-radius:999px;border:1px solid rgba(2,6,23,.18);color:#0f172a;background:rgba(2,6,23,.03)}
+      .tag.ok{border-color:rgba(22,163,74,.35);background:rgba(22,163,74,.06)}
+      .tag.warn{border-color:rgba(245,158,11,.35);background:rgba(245,158,11,.08)}
+      .tag.danger{border-color:rgba(225,29,72,.35);background:rgba(225,29,72,.06)}
+      .foot{margin-top:12px;font-size:11px;color:#475569}
+      </style></head><body>${content}</body></html>
+    `);
+    w.document.close();
+    w.focus();
+    w.print();
+  });
+
+  $("clearAll").addEventListener("click", ()=>{
+    meds.length = 0;
+    renderMedList();
+    $("outputWrap").style.display="none";
+    $("print").disabled = true;
+    resetMedInputs();
+    $("goal").value = "";
+  });
+
+  $("loadExample").addEventListener("click", ()=>{
+    meds.length=0;
+    addMedication({
+      name:"Atorvastatina",
+      indication:"Reducir colesterol LDL y bajar el riesgo cardiovascular",
+      dose:"1 vez al día, preferentemente por la noche, con o sin comida",
+      benefit:"Ayuda a prevenir infarto e ictus a largo plazo",
+      ae:["Molestias digestivas leves","Dolor muscular leve (si aparece, coméntalo)"],
+      warn:["Dolor muscular intenso o debilidad marcada","Ictericia u orina muy oscura"],
+      notes:["Evitar pomelo en grandes cantidades","Avisar si se añaden macrólidos u otros fármacos nuevos"]
+    });
+    addMedication({
+      name:"Enalapril/Hidroclorotiazida",
+      indication:"Controlar la presión arterial",
+      dose:"1 vez al día por la mañana",
+      benefit:"Reduce el riesgo de complicaciones por hipertensión",
+      ae:["Mareo al inicio (sobre todo al levantarse)","Aumento de la diuresis"],
+      warn:["Hinchas la cara/labios o dificultad para respirar","Desmayo o mareo intenso persistente"],
+      notes:["Hidratación adecuada","Control analítico según indicación médica"]
+    });
+    addMedication({
+      name:"Metformina",
+      indication:"Mejorar el control de glucosa en diabetes tipo 2",
+      dose:"Con comidas (desayuno y cena), según pauta",
+      benefit:"Ayuda a controlar azúcar y protege a largo plazo",
+      ae:["Náuseas o diarrea al inicio (suele mejorar)"],
+      warn:["Vómitos persistentes o gran debilidad","Síntomas intensos tras deshidratación"],
+      notes:["Tomarla con comida reduce molestias","En pruebas con contraste, avisar al equipo sanitario"]
+    });
+    $("age").value="adulto"; $("course").value="cronico"; $("lit").value="media"; $("ctx").value="general";
+    $("goal").value="Integra el tratamiento en dos momentos del día y reconoce señales de alarma reales sin alarmismo.";
+    renderMedList();
+  });
+</script>
+</body>
+</html>
