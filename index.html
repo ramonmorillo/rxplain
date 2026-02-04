@@ -4,288 +4,558 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>RxPlain · Traducción farmacoterapéutica</title>
-
   <style>
     :root{
       --bg:#0b1220; --card:#111a2e; --muted:#9fb0d0; --text:#eaf0ff;
-      --accent:#6aa6ff; --ok:#4ade80; --warn:#fbbf24; --danger:#fb7185;
-      --border:rgba(255,255,255,.10);
+      --accent:#6aa6ff; --border:rgba(255,255,255,.10);
+      --paper:#ffffff; --ink:#0b1220;
     }
     *{box-sizing:border-box}
-    body{
-      margin:0;
-      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-      background:linear-gradient(180deg,var(--bg),#070b14);
-      color:var(--text)
-    }
-    header{
-      padding:24px 16px;
-      border-bottom:1px solid var(--border)
-    }
-    header h1{
-      margin:0;
-      font-size:18px;
-      letter-spacing:.2px
-    }
-    header p{
-      margin:8px 0 0;
-      color:var(--muted);
-      font-size:13px;
-      max-width:980px
-    }
-    main{
-      max-width:1100px;
-      margin:0 auto;
-      padding:16px;
-      display:grid;
-      gap:16px
-    }
-    .grid{
-      display:grid;
-      grid-template-columns:1fr;
-      gap:16px
-    }
-    @media(min-width:980px){
-      .grid{grid-template-columns:1fr 1fr}
-    }
-    .card{
-      background:rgba(17,26,46,.82);
-      border:1px solid var(--border);
-      border-radius:16px;
-      padding:14px;
-      box-shadow:0 10px 30px rgba(0,0,0,.25)
-    }
-    .card h2{
-      margin:0 0 12px;
-      font-size:15px
-    }
-    label{
-      display:block;
-      font-size:12px;
-      color:var(--muted);
-      margin:10px 0 6px
-    }
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:linear-gradient(180deg,var(--bg),#070b14);color:var(--text)}
+    header{padding:24px 16px;border-bottom:1px solid var(--border)}
+    header h1{margin:0;font-size:18px;letter-spacing:.2px}
+    header p{margin:8px 0 0;color:var(--muted);font-size:13px;max-width:980px}
+    main{max-width:1150px;margin:0 auto;padding:16px;display:grid;gap:16px}
+    .grid{display:grid;grid-template-columns:1fr;gap:16px}
+    @media(min-width:980px){.grid{grid-template-columns:1fr 1fr}}
+    .card{background:rgba(17,26,46,.82);border:1px solid var(--border);border-radius:16px;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    .card h2{margin:0 0 12px;font-size:15px}
+    label{display:block;font-size:12px;color:var(--muted);margin:10px 0 6px}
     input,select,textarea{
-      width:100%;
-      padding:10px;
-      border-radius:12px;
-      border:1px solid var(--border);
-      background:#0b1326;
-      color:var(--text)
+      width:100%;padding:10px 10px;border-radius:12px;border:1px solid var(--border);
+      background:#0b1326;color:var(--text);outline:none
     }
-    textarea{min-height:80px}
+    textarea{min-height:88px;resize:vertical;line-height:1.35}
     .row{display:grid;grid-template-columns:1fr;gap:10px}
     @media(min-width:560px){.row{grid-template-columns:1fr 1fr}}
+    .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
     button{
-      padding:10px 12px;
-      border-radius:12px;
-      border:1px solid var(--border);
-      background:rgba(106,166,255,.15);
-      color:var(--text);
-      cursor:pointer;
-      font-weight:600
+      padding:10px 12px;border-radius:12px;border:1px solid var(--border);
+      background:rgba(106,166,255,.15);color:var(--text);cursor:pointer;font-weight:600
     }
     button.secondary{background:rgba(255,255,255,.06)}
     button.danger{background:rgba(251,113,133,.12)}
-    .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
     .tiny{font-size:11px;color:var(--muted)}
+    .pill{display:inline-flex;gap:8px;align-items:center;font-size:12px;color:var(--muted)}
+    .pill b{color:var(--text)}
     hr{border:0;border-top:1px solid var(--border);margin:12px 0}
 
     /* OUTPUT */
     #outputWrap{display:none}
-    .infografia{
-      background:#ffffff;
-      color:#0b1220;
-      border-radius:18px;
-      padding:18px
-    }
+    .infografia{background:var(--paper);color:var(--ink);border-radius:18px;padding:18px}
     .infografia h3{margin:0 0 6px;font-size:18px}
-    .sub{margin:0 0 14px;color:#334155;font-size:13px}
-    .blocks{display:grid;grid-template-columns:1fr;gap:12px}
-    @media(min-width:820px){.blocks{grid-template-columns:1fr 1fr}}
-    .block{
+    .sub{margin:0 0 14px;color:#334155;font-size:13px;line-height:1.35}
+    .tags{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 14px}
+    .tag{font-size:11px;padding:4px 8px;border-radius:999px;border:1px solid rgba(2,6,23,.18);color:#0f172a;background:rgba(2,6,23,.03)}
+    .tag.ok{border-color:rgba(22,163,74,.35);background:rgba(22,163,74,.06)}
+    .tag.warn{border-color:rgba(245,158,11,.35);background:rgba(245,158,11,.08)}
+    .tag.danger{border-color:rgba(225,29,72,.35);background:rgba(225,29,72,.06)}
+
+    /* Alineación por medicamento */
+    .medGrid{
+      display:grid;
+      grid-template-columns:1fr;
+      gap:12px;
+      margin-top:10px;
+    }
+    @media(min-width:980px){
+      .medGrid{grid-template-columns:1.2fr 1fr 1fr 1fr}
+      .medHead{display:block}
+    }
+    .medHead{
+      display:none;
+      font-size:12px;
+      font-weight:700;
+      color:#0f172a;
+      padding:10px 12px;
+      border:1px solid rgba(2,6,23,.12);
+      border-radius:14px;
+      background:rgba(2,6,23,.03);
+    }
+    .cell{
       border:1px solid rgba(2,6,23,.15);
       border-radius:16px;
-      padding:14px;
-      display:flex;
-      gap:12px
+      padding:12px;
+      background:#fff;
+      min-height:110px;
     }
-    .icon{
-      width:40px;height:40px;
-      border-radius:12px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      background:rgba(2,6,23,.06);
-      font-size:18px
+    .cell h4{margin:0 0 6px;font-size:13px;color:#0f172a}
+    .cell ul{margin:0;padding-left:18px}
+    .cell li{margin:6px 0;font-size:12.5px;line-height:1.25;color:#0f172a}
+    .iconBadge{
+      display:inline-flex;align-items:center;justify-content:center;
+      width:28px;height:28px;border-radius:10px;
+      background:rgba(2,6,23,.06);margin-right:8px;font-size:14px
     }
-    .block h4{margin:0 0 6px;font-size:14px}
-    ul{margin:0;padding-left:18px}
-    li{margin:6px 0;font-size:13px;line-height:1.25}
-    .foot{
-      margin-top:14px;
-      font-size:11px;
-      color:#475569
-    }
+    .medTitle{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+    .medName{font-weight:800;font-size:13px}
+
     a{color:#2563eb;text-decoration:none}
     a:hover{text-decoration:underline}
+
+    .foot{margin-top:14px;font-size:11px;color:#475569}
+    .notice{
+      border-left:3px solid rgba(106,166,255,.65);
+      padding:10px 12px;background:rgba(106,166,255,.08);
+      border-radius:12px;color:#0f172a;font-size:12px
+    }
   </style>
 </head>
 
 <body>
-
 <header>
   <h1>RxPlain · Traducción farmacoterapéutica a pacientes</h1>
   <p>
-    Herramienta para transformar tratamientos completos y fichas técnicas en
-    información clara, priorizada y visual para pacientes.
+    Convierte tratamientos completos (a partir de ficha técnica/SmPC y tu criterio clínico) en una infografía clara, priorizada y útil.
+    Sin APIs · sin pago · funciona en local y en GitHub Pages.
   </p>
 </header>
 
 <main class="grid">
-
-  <!-- PERFIL -->
+  <!-- PERFIL + PERSONALIZACIÓN -->
   <section class="card">
-    <h2>Perfil del paciente</h2>
+    <h2>1) Perfil del paciente (y personalización opcional)</h2>
+
     <div class="row">
       <div>
         <label>Edad</label>
         <select id="age">
-          <option>Joven</option>
-          <option selected>Adulto</option>
-          <option>Mayor</option>
+          <option value="joven">Joven</option>
+          <option value="adulto" selected>Adulto</option>
+          <option value="mayor">Mayor</option>
         </select>
       </div>
+
       <div>
         <label>Tipo de proceso</label>
         <select id="course">
-          <option>Agudo</option>
-          <option selected>Crónico</option>
+          <option value="agudo">Agudo</option>
+          <option value="cronico" selected>Crónico</option>
+        </select>
+      </div>
+
+      <div>
+        <label>Alfabetización en salud</label>
+        <select id="lit">
+          <option value="baja">Baja</option>
+          <option value="media" selected>Media</option>
+          <option value="alta">Alta</option>
+        </select>
+      </div>
+
+      <div>
+        <label>Contexto</label>
+        <select id="ctx">
+          <option value="general" selected>General</option>
+          <option value="laboral">Laboral activo</option>
+          <option value="cuidador">Cuidador</option>
+          <option value="jubilado">Jubilado</option>
         </select>
       </div>
     </div>
-    <label>Objetivo educativo</label>
-    <input id="goal" placeholder="Ej.: integrar el tratamiento en la rutina diaria" />
+
+    <label>Indicación / problema de salud principal (nivel tratamiento)</label>
+    <input id="indication" placeholder="Ej.: Riesgo cardiovascular elevado / VIH / EPOC / Diabetes tipo 2"/>
+
+    <label>Objetivos en salud (nivel tratamiento; 2–4 bullets)</label>
+    <textarea id="goals" placeholder="- Controlar presión arterial y LDL&#10;- Reducir riesgo de eventos cardiovasculares&#10;- Minimizar efectos adversos y facilitar adherencia"></textarea>
+
+    <label>Objetivo educativo (1 frase)</label>
+    <input id="edu_goal" placeholder="Ej.: Integrar el tratamiento en 2 momentos del día y reconocer señales de alarma reales." />
+
+    <div class="notice" style="margin-top:12px">
+      Personalización opcional (para entregar al paciente). Si lo dejas en blanco, no aparece.
+    </div>
+
+    <div class="row">
+      <div>
+        <label>Nombre del farmacéutico/a (opcional)</label>
+        <input id="pharm_name" placeholder="Ej.: Ramón Morillo"/>
+      </div>
+      <div>
+        <label>Servicio/centro (opcional)</label>
+        <input id="center" placeholder="Ej.: Servicio de Farmacia · Hospital ..."/>
+      </div>
+      <div>
+        <label>Contacto (opcional)</label>
+        <input id="contact" placeholder="Ej.: Teléfono / email / extensión"/>
+      </div>
+      <div>
+        <label>Fecha (opcional)</label>
+        <input id="date" placeholder="Ej.: 4 feb 2026"/>
+      </div>
+    </div>
   </section>
 
-  <!-- MEDICAMENTOS -->
+  <!-- TRATAMIENTO -->
   <section class="card">
-    <h2>Tratamiento completo</h2>
+    <h2>2) Tratamiento completo</h2>
+    <p class="tiny">
+      Añade medicamentos uno a uno. Para cada uno, intenta quedarte con lo que realmente usarías en consulta:
+      pauta, “normal notar”, “cuándo avisar”.
+    </p>
 
-    <label>Nombre del medicamento</label>
-    <input id="m_name" />
+    <div class="row">
+      <div>
+        <label>Nombre del medicamento</label>
+        <input id="m_name" placeholder="Ej.: atorvastatina"/>
+      </div>
+      <div>
+        <label>Para qué sirve (en este paciente)</label>
+        <input id="m_ind" placeholder="Ej.: bajar LDL y reducir riesgo CV"/>
+      </div>
+      <div>
+        <label>Cómo se toma (posología / instrucciones)</label>
+        <input id="m_dose" placeholder="Ej.: 1 vez al día por la noche, con o sin comida"/>
+      </div>
+      <div>
+        <label>Mensaje clave (beneficio en 1 frase, opc.)</label>
+        <input id="m_benefit" placeholder="Ej.: ayuda a prevenir infarto e ictus a largo plazo"/>
+      </div>
+    </div>
 
-    <label>Para qué sirve</label>
-    <input id="m_ind" />
+    <label>Qué es normal notar (3–6 bullets)</label>
+    <textarea id="m_ae" placeholder="- Molestias digestivas leves al inicio&#10;- Mareo leve al levantarse"></textarea>
 
-    <label>Cómo se toma</label>
-    <input id="m_dose" />
+    <label>Cuándo avisar (2–4 bullets; señales de alarma reales)</label>
+    <textarea id="m_warn" placeholder="- Dolor muscular intenso o debilidad marcada&#10;- Hinchazón de cara/labios o dificultad para respirar"></textarea>
 
-    <label>Qué es normal notar</label>
-    <textarea id="m_ae"></textarea>
-
-    <label>Cuándo avisar</label>
-    <textarea id="m_warn"></textarea>
+    <label>Notas/precauciones o interacciones (opc.; 1–4 bullets)</label>
+    <textarea id="m_notes" placeholder="- Evitar pomelo en grandes cantidades&#10;- Avisar si se añaden antibióticos nuevos"></textarea>
 
     <div class="btns">
-      <button onclick="addMed()">Añadir medicamento</button>
-      <button class="secondary" onclick="loadExample()">Cargar ejemplo</button>
+      <button id="addMed">Añadir medicamento</button>
+      <button class="secondary" id="loadExample">Cargar ejemplo (3 fármacos)</button>
+      <button class="danger" id="clearAll">Borrar todo</button>
     </div>
 
     <hr>
-    <button onclick="generate()">Generar infografía</button>
+    <div class="pill">Medicamentos añadidos: <b id="count">0</b></div>
+    <div id="medList" class="tiny" style="margin-top:8px;line-height:1.5"></div>
+
+    <div class="btns">
+      <button id="generate">Generar infografía</button>
+      <button class="secondary" id="print" disabled>Imprimir / Guardar PDF</button>
+    </div>
   </section>
 
   <!-- SALIDA -->
   <section class="card" id="outputWrap">
-    <h2>Resultado</h2>
-    <div id="output" class="infografia"></div>
+    <h2>3) Infografía (alineada por medicamento)</h2>
+    <div class="tiny">Tip: usa “Imprimir / Guardar PDF” para obtener un PDF desde el navegador.</div>
+    <hr>
+    <div id="output" class="infografia" aria-label="Infografía RxPlain"></div>
   </section>
-
 </main>
 
 <script>
-const meds=[];
+  const meds = [];
+  const $ = (id)=>document.getElementById(id);
 
-function addMed(){
-  meds.push({
-    name:m_name.value,
-    ind:m_ind.value,
-    dose:m_dose.value,
-    ae:m_ae.value.split("\n"),
-    warn:m_warn.value.split("\n")
-  });
-  m_name.value=m_ind.value=m_dose.value=m_ae.value=m_warn.value="";
-}
+  function escapeHtml(str){
+    return (str||"").replace(/[&<>"']/g, (c)=>({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    }[c]));
+  }
 
-function generate(){
-  let html=`<h3>Tu tratamiento explicado de forma clara</h3>
-  <p class="sub">${goal.value}</p>
+  function sanitizeLines(text, max=8){
+    return (text||"")
+      .split("\n")
+      .map(s=>s.trim())
+      .filter(Boolean)
+      .slice(0, max);
+  }
 
-  <div class="blocks">`;
+  function renderMedList(){
+    $("count").textContent = meds.length.toString();
+    $("medList").innerHTML = meds.map((m,i)=>`• [${i+1}] <b>${escapeHtml(m.name)}</b> — ${escapeHtml(m.dose||"")}`).join("<br>");
+  }
 
-  meds.forEach(m=>{
-    html+=`
-    <div class="block">
-      <div class="icon">💊</div>
-      <div>
-        <h4>${m.name}</h4>
-        <ul>
-          <li><b>Para qué sirve:</b> ${m.ind}</li>
-          <li><b>Cómo tomarlo:</b> ${m.dose}</li>
+  function resetMedInputs(){
+    ["m_name","m_ind","m_dose","m_benefit","m_ae","m_warn","m_notes"].forEach(id=>$(id).value="");
+    $("m_name").focus();
+  }
+
+  function addMedication(obj){
+    meds.push(obj);
+    renderMedList();
+  }
+
+  function computeTags(){
+    const course = $("course").value;
+    const lit = $("lit").value;
+    const hasWarn = meds.some(m=>m.warn?.length);
+    const hasNormal = meds.some(m=>m.ae?.length);
+
+    const tags = [];
+    tags.push(course==="cronico" ? {t:"Crónico", cls:"ok"} : {t:"Agudo", cls:"ok"});
+    tags.push({t:`${meds.length} fármacos`, cls:""});
+    tags.push({t:`Alfabetización: ${lit}`, cls:""});
+    if (hasWarn) tags.push({t:"Alertas presentes", cls:"danger"});
+    if (hasNormal) tags.push({t:"Efectos esperables", cls:"warn"});
+    return tags;
+  }
+
+  function pickTopMessages(){
+    // Máximo 3 mensajes prioritarios: warnings primero, luego beneficios
+    const scored = meds.map(m=>{
+      let s=0;
+      if ((m.warn||[]).length) s+=5;
+      if ((m.benefit||"").length>20) s+=2;
+      if ((m.notes||[]).length) s+=1;
+      return {m,s};
+    }).sort((a,b)=>b.s-a.s);
+
+    return scored.slice(0,3).map(x=>{
+      const m=x.m;
+      const w=(m.warn||[])[0];
+      const b=(m.benefit||"");
+      if (w) return `Prioridad: <b>${escapeHtml(m.name)}</b> — vigilar: ${escapeHtml(w)}`;
+      if (b) return `Clave: <b>${escapeHtml(m.name)}</b> — ${escapeHtml(b)}`;
+      return `Clave: <b>${escapeHtml(m.name)}</b>`;
+    });
+  }
+
+  function buildOutput(){
+    const course = $("course").value;
+    const indication = $("indication").value.trim();
+    const goals = sanitizeLines($("goals").value, 6);
+    const eduGoal = $("edu_goal").value.trim();
+
+    // Personalización (opcional)
+    const pharmName = $("pharm_name").value.trim();
+    const center = $("center").value.trim();
+    const contact = $("contact").value.trim();
+    const date = $("date").value.trim();
+
+    const headerLines = [];
+    if (indication) headerLines.push(`<b>Indicación principal:</b> ${escapeHtml(indication)}`);
+    if (goals.length) headerLines.push(`<b>Objetivos en salud:</b> ${goals.map(g=>escapeHtml(g)).join(" · ")}`);
+    if (eduGoal) headerLines.push(`<b>Objetivo educativo:</b> ${escapeHtml(eduGoal)}`);
+    if (!headerLines.length) headerLines.push(`Información adaptada para facilitar el uso correcto del tratamiento.`);
+
+    const tags = computeTags();
+    const topMsgs = pickTopMessages();
+
+    // Tabla alineada (por medicamento)
+    const head = `
+      <div class="medHead">Medicamento</div>
+      <div class="medHead">Cómo tomarlo</div>
+      <div class="medHead">Qué es normal notar</div>
+      <div class="medHead">Cuándo avisar</div>
+    `;
+
+    const rows = meds.map(m=>{
+      const ae = (m.ae||[]).length ? (m.ae||[]) : ["Si notas molestias leves al inicio, suele ser transitorio."];
+      const warn = (m.warn||[]).length ? (m.warn||[]) : ["Si aparece un síntoma intenso o persistente, consulta."];
+      const notes = (m.notes||[]).slice(0,3);
+
+      return `
+        <div class="cell">
+          <div class="medTitle"><span class="iconBadge">💊</span><div class="medName">${escapeHtml(m.name)}</div></div>
+          <ul>
+            ${m.indication ? `<li><b>Para qué:</b> ${escapeHtml(m.indication)}</li>` : ""}
+            ${m.benefit ? `<li><b>Clave:</b> ${escapeHtml(m.benefit)}</li>` : ""}
+            ${notes.length ? `<li><b>Precauciones:</b> ${notes.map(n=>escapeHtml(n)).join(" · ")}</li>` : ""}
+          </ul>
+        </div>
+
+        <div class="cell">
+          <h4><span class="iconBadge">🕒</span>Cómo tomarlo</h4>
+          <ul>
+            ${m.dose ? `<li>${escapeHtml(m.dose)}</li>` : `<li>Según pauta indicada por tu equipo sanitario.</li>`}
+            ${course==="cronico" ? `<li>La regularidad es más importante que hacerlo “perfecto”.</li>` : `<li>Completa la duración indicada aunque mejores.</li>`}
+          </ul>
+        </div>
+
+        <div class="cell">
+          <h4><span class="iconBadge">🙂</span>Qué es normal notar</h4>
+          <ul>
+            ${ae.slice(0,6).map(x=>`<li>${escapeHtml(x)}</li>`).join("")}
+          </ul>
+        </div>
+
+        <div class="cell">
+          <h4><span class="iconBadge">🚨</span>Cuándo avisar</h4>
+          <ul>
+            ${warn.slice(0,6).map(x=>`<li>${escapeHtml(x)}</li>`).join("")}
+          </ul>
+        </div>
+      `;
+    }).join("");
+
+    // Bloque de contacto (solo si hay algo)
+    const contactBlock = (pharmName || center || contact || date) ? `
+      <div style="margin-top:14px;border:1px solid rgba(2,6,23,.12);border-radius:14px;padding:10px 12px;background:rgba(2,6,23,.03)">
+        <div style="font-size:12px;color:#0f172a;margin-bottom:6px"><b>Tu referencia de contacto</b></div>
+        <div style="font-size:12px;color:#0f172a;line-height:1.4">
+          ${pharmName ? `<div><b>Farmacéutico/a:</b> ${escapeHtml(pharmName)}</div>` : ""}
+          ${center ? `<div><b>Centro/Servicio:</b> ${escapeHtml(center)}</div>` : ""}
+          ${contact ? `<div><b>Contacto:</b> ${escapeHtml(contact)}</div>` : ""}
+          ${date ? `<div><b>Fecha:</b> ${escapeHtml(date)}</div>` : ""}
+        </div>
+      </div>
+    ` : "";
+
+    const sourcesBlock = `
+      <div style="margin-top:16px;border-top:1px dashed rgba(2,6,23,.25);padding-top:12px">
+        <h4 style="margin:0 0 6px;font-size:13px">Fuentes y recursos fiables</h4>
+        <ul style="margin:0;padding-left:18px;font-size:12px;color:#334155;line-height:1.4">
+          <li><a href="https://www.ema.europa.eu/" target="_blank" rel="noopener">Agencia Europea del Medicamento (EMA)</a></li>
+          <li><a href="https://www.aemps.gob.es/" target="_blank" rel="noopener">Agencia Española de Medicamentos y Productos Sanitarios (AEMPS)</a></li>
+          <li><a href="https://cima.aemps.es/" target="_blank" rel="noopener">CIMA – Centro de Información online de Medicamentos (AEMPS)</a></li>
+          <li><a href="https://www.sefh.es/" target="_blank" rel="noopener">Sociedad Española de Farmacia Hospitalaria (SEFH)</a></li>
+          <li><a href="https://www.sefh.es/escuela-de-pacientes.php" target="_blank" rel="noopener">Escuela de Pacientes de la SEFH</a></li>
         </ul>
       </div>
-    </div>
-
-    <div class="block">
-      <div class="icon">🙂</div>
-      <div>
-        <h4>Qué es normal notar</h4>
-        <ul>${m.ae.map(x=>`<li>${x}</li>`).join("")}</ul>
-      </div>
-    </div>
-
-    <div class="block">
-      <div class="icon">🚨</div>
-      <div>
-        <h4>Cuándo avisar</h4>
-        <ul>${m.warn.map(x=>`<li>${x}</li>`).join("")}</ul>
-      </div>
-    </div>
     `;
+
+    return `
+      <h3>Tu tratamiento, explicado de forma clara</h3>
+      <p class="sub">${headerLines.join("<br>")}</p>
+
+      <div class="tags">
+        ${tags.slice(0,6).map(x=>`<span class="tag ${x.cls||""}">${escapeHtml(x.t)}</span>`).join("")}
+      </div>
+
+      <div style="border:1px solid rgba(2,6,23,.12);border-radius:14px;padding:10px 12px;background:rgba(2,6,23,.03)">
+        <div style="font-size:12px;color:#0f172a;margin-bottom:6px"><b>Mensajes prioritarios (máx. 3)</b></div>
+        <ul style="margin:0;padding-left:18px">
+          ${topMsgs.length ? topMsgs.map(x=>`<li style="font-size:12px;margin:6px 0">${x}</li>`).join("") : `<li style="font-size:12px;margin:6px 0">Integra el tratamiento en una rutina estable.</li>`}
+        </ul>
+      </div>
+
+      <div class="medGrid">
+        ${head}
+        ${rows}
+      </div>
+
+      ${contactBlock}
+
+      ${sourcesBlock}
+
+      <p class="foot">
+        RxPlain · Versión 0.3 · © Ramón Morillo, febrero 2026 ·
+        Material informativo adaptado al perfil indicado. No sustituye la consulta con profesionales sanitarios.
+      </p>
+    `;
+  }
+
+  // Eventos
+  $("addMed").addEventListener("click", ()=>{
+    const name = $("m_name").value.trim();
+    if (!name) { alert("Falta el nombre del medicamento."); return; }
+
+    addMedication({
+      name,
+      indication: $("m_ind").value.trim(),
+      dose: $("m_dose").value.trim(),
+      benefit: $("m_benefit").value.trim(),
+      ae: sanitizeLines($("m_ae").value, 8),
+      warn: sanitizeLines($("m_warn").value, 8),
+      notes: sanitizeLines($("m_notes").value, 6)
+    });
+    resetMedInputs();
   });
 
-  html+=`</div>
+  $("generate").addEventListener("click", ()=>{
+    if (meds.length===0){ alert("Añade al menos 1 medicamento."); return; }
+    $("output").innerHTML = buildOutput();
+    $("outputWrap").style.display = "block";
+    $("print").disabled = false;
+    $("outputWrap").scrollIntoView({behavior:"smooth", block:"start"});
+  });
 
-  <div style="margin-top:16px;border-top:1px dashed #cbd5e1;padding-top:12px">
-    <h4 style="font-size:13px">Fuentes y recursos fiables</h4>
-    <ul style="font-size:12px">
-      <li><a href="https://www.ema.europa.eu/" target="_blank">Agencia Europea del Medicamento (EMA)</a></li>
-      <li><a href="https://www.aemps.gob.es/" target="_blank">Agencia Española de Medicamentos y Productos Sanitarios (AEMPS)</a></li>
-      <li><a href="https://cima.aemps.es/" target="_blank">CIMA – AEMPS</a></li>
-      <li><a href="https://www.sefh.es/" target="_blank">Sociedad Española de Farmacia Hospitalaria (SEFH)</a></li>
-      <li><a href="https://www.sefh.es/escuela-de-pacientes.php" target="_blank">Escuela de Pacientes SEFH</a></li>
-    </ul>
-  </div>
+  $("print").addEventListener("click", ()=>{
+    const content = $("output").outerHTML;
+    const w = window.open("", "_blank");
+    w.document.write(`
+      <html><head><title>RxPlain - PDF</title>
+      <meta charset="utf-8"/>
+      <meta name="viewport" content="width=device-width,initial-scale=1"/>
+      <style>
+        body{margin:0;padding:18px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#f1f5f9}
+        .infografia{background:#fff;border-radius:18px;padding:18px}
+        .tags{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 14px}
+        .tag{font-size:11px;padding:4px 8px;border-radius:999px;border:1px solid rgba(2,6,23,.18);color:#0f172a;background:rgba(2,6,23,.03)}
+        .tag.ok{border-color:rgba(22,163,74,.35);background:rgba(22,163,74,.06)}
+        .tag.warn{border-color:rgba(245,158,11,.35);background:rgba(245,158,11,.08)}
+        .tag.danger{border-color:rgba(225,29,72,.35);background:rgba(225,29,72,.06)}
+        .medGrid{display:grid;grid-template-columns:1fr;gap:12px;margin-top:10px}
+        @media(min-width:980px){.medGrid{grid-template-columns:1.2fr 1fr 1fr 1fr}.medHead{display:block}}
+        .medHead{display:none;font-size:12px;font-weight:700;color:#0f172a;padding:10px 12px;border:1px solid rgba(2,6,23,.12);border-radius:14px;background:rgba(2,6,23,.03)}
+        .cell{border:1px solid rgba(2,6,23,.15);border-radius:16px;padding:12px;background:#fff;min-height:110px}
+        .cell h4{margin:0 0 6px;font-size:13px;color:#0f172a}
+        .cell ul{margin:0;padding-left:18px}
+        .cell li{margin:6px 0;font-size:12.5px;line-height:1.25;color:#0f172a}
+        .iconBadge{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:10px;background:rgba(2,6,23,.06);margin-right:8px;font-size:14px}
+        .medTitle{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+        .medName{font-weight:800;font-size:13px}
+        .sub{margin:0 0 14px;color:#334155;font-size:13px;line-height:1.35}
+        .foot{margin-top:14px;font-size:11px;color:#475569}
+        a{color:#2563eb;text-decoration:none} a:hover{text-decoration:underline}
+      </style></head><body>${content}</body></html>
+    `);
+    w.document.close();
+    w.focus();
+    w.print();
+  });
 
-  <p class="foot">
-    RxPlain · Versión 0.2 · © Ramón Morillo, febrero 2026 ·
-    Material informativo que no sustituye la consulta con profesionales sanitarios.
-  </p>`;
+  $("clearAll").addEventListener("click", ()=>{
+    meds.length = 0;
+    renderMedList();
+    $("outputWrap").style.display="none";
+    $("print").disabled = true;
+    resetMedInputs();
+    $("indication").value = "";
+    $("goals").value = "";
+    $("edu_goal").value = "";
+  });
 
-  output.innerHTML=html;
-  outputWrap.style.display="block";
-}
+  $("loadExample").addEventListener("click", ()=>{
+    meds.length=0;
 
-function loadExample(){
-  meds.length=0;
-  m_name.value="Atorvastatina";
-  m_ind.value="Reducir colesterol y riesgo cardiovascular";
-  m_dose.value="Una vez al día por la noche";
-  m_ae.value="Molestias digestivas leves\nDolor muscular leve";
-  m_warn.value="Dolor muscular intenso\nOrina oscura";
-}
+    // Ejemplo RCV (3 fármacos) — demostración
+    addMedication({
+      name:"Atorvastatina",
+      indication:"Reducir colesterol LDL y bajar el riesgo cardiovascular",
+      dose:"1 vez al día, preferentemente por la noche, con o sin comida",
+      benefit:"Ayuda a prevenir infarto e ictus a largo plazo",
+      ae:["Molestias digestivas leves al inicio","Dolor muscular leve (si aparece, coméntalo)"],
+      warn:["Dolor muscular intenso o debilidad marcada","Ictericia u orina muy oscura"],
+      notes:["Evitar pomelo en grandes cantidades","Avisar si se añaden antibióticos nuevos"]
+    });
+
+    addMedication({
+      name:"Enalapril/Hidroclorotiazida",
+      indication:"Controlar la presión arterial",
+      dose:"1 vez al día por la mañana",
+      benefit:"Reduce el riesgo de complicaciones por hipertensión",
+      ae:["Mareo al inicio (levántate despacio)","Aumento de la diuresis"],
+      warn:["Hinchazón de cara/labios o dificultad para respirar","Desmayo o mareo intenso persistente"],
+      notes:["Hidratación adecuada","Control analítico según indicación médica"]
+    });
+
+    addMedication({
+      name:"Metformina",
+      indication:"Mejorar control de glucosa en diabetes tipo 2",
+      dose:"Con comidas (desayuno y/o cena), según pauta",
+      benefit:"Ayuda a controlar el azúcar y protege a largo plazo",
+      ae:["Náuseas o diarrea al inicio (suele mejorar)"],
+      warn:["Vómitos persistentes o gran debilidad","Síntomas intensos tras deshidratación"],
+      notes:["Tomarla con comida reduce molestias","En pruebas con contraste, avisa al equipo sanitario"]
+    });
+
+    $("age").value="adulto";
+    $("course").value="cronico";
+    $("lit").value="media";
+    $("ctx").value="general";
+    $("indication").value="Riesgo cardiovascular elevado";
+    $("goals").value="- Controlar presión arterial y LDL\n- Reducir riesgo de eventos cardiovasculares\n- Facilitar adherencia y minimizar efectos adversos";
+    $("edu_goal").value="Integra el tratamiento en 2 momentos del día y reconoce señales de alarma reales sin alarmismo.";
+    renderMedList();
+  });
+
 </script>
-
 </body>
 </html>
