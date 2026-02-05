@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>RxPlain · Traducción farmacoterapéutica</title>
+
   <style>
     :root{
       --bg:#0b1220; --card:#111a2e; --muted:#9fb0d0; --text:#eaf0ff;
@@ -14,10 +15,11 @@
     body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:linear-gradient(180deg,var(--bg),#070b14);color:var(--text)}
     header{padding:24px 16px;border-bottom:1px solid var(--border)}
     header h1{margin:0;font-size:18px;letter-spacing:.2px}
-    header p{margin:8px 0 0;color:var(--muted);font-size:13px;max-width:980px}
+    header p{margin:8px 0 0;color:var(--muted);font-size:13px;max-width:980px;line-height:1.35}
     main{max-width:1150px;margin:0 auto;padding:16px;display:grid;gap:16px}
     .grid{display:grid;grid-template-columns:1fr;gap:16px}
     @media(min-width:980px){.grid{grid-template-columns:1fr 1fr}}
+
     .card{background:rgba(17,26,46,.82);border:1px solid var(--border);border-radius:16px;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
     .card h2{margin:0 0 12px;font-size:15px}
     label{display:block;font-size:12px;color:var(--muted);margin:10px 0 6px}
@@ -40,6 +42,19 @@
     .pill b{color:var(--text)}
     hr{border:0;border-top:1px solid var(--border);margin:12px 0}
 
+    /* CIMA results */
+    .resultItem{
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:12px;
+      padding:10px;
+      margin:8px 0;
+      background:rgba(255,255,255,.05);
+      cursor:pointer;
+    }
+    .resultItem:hover{background:rgba(106,166,255,.10)}
+    .resultTitle{font-weight:700;color:var(--text);font-size:13px}
+    .resultMeta{color:var(--muted);font-size:12px;margin-top:4px;line-height:1.3}
+
     /* OUTPUT */
     #outputWrap{display:none}
     .infografia{background:var(--paper);color:var(--ink);border-radius:18px;padding:18px}
@@ -52,33 +67,17 @@
     .tag.danger{border-color:rgba(225,29,72,.35);background:rgba(225,29,72,.06)}
 
     /* Alineación por medicamento */
-    .medGrid{
-      display:grid;
-      grid-template-columns:1fr;
-      gap:12px;
-      margin-top:10px;
-    }
+    .medGrid{display:grid;grid-template-columns:1fr;gap:12px;margin-top:10px}
     @media(min-width:980px){
       .medGrid{grid-template-columns:1.2fr 1fr 1fr 1fr}
       .medHead{display:block}
     }
     .medHead{
-      display:none;
-      font-size:12px;
-      font-weight:700;
-      color:#0f172a;
-      padding:10px 12px;
-      border:1px solid rgba(2,6,23,.12);
-      border-radius:14px;
-      background:rgba(2,6,23,.03);
+      display:none;font-size:12px;font-weight:700;color:#0f172a;
+      padding:10px 12px;border:1px solid rgba(2,6,23,.12);
+      border-radius:14px;background:rgba(2,6,23,.03);
     }
-    .cell{
-      border:1px solid rgba(2,6,23,.15);
-      border-radius:16px;
-      padding:12px;
-      background:#fff;
-      min-height:110px;
-    }
+    .cell{border:1px solid rgba(2,6,23,.15);border-radius:16px;padding:12px;background:#fff;min-height:110px}
     .cell h4{margin:0 0 6px;font-size:13px;color:#0f172a}
     .cell ul{margin:0;padding-left:18px}
     .cell li{margin:6px 0;font-size:12.5px;line-height:1.25;color:#0f172a}
@@ -92,12 +91,18 @@
 
     a{color:#2563eb;text-decoration:none}
     a:hover{text-decoration:underline}
-
     .foot{margin-top:14px;font-size:11px;color:#475569}
+
     .notice{
       border-left:3px solid rgba(106,166,255,.65);
       padding:10px 12px;background:rgba(106,166,255,.08);
-      border-radius:12px;color:#0f172a;font-size:12px
+      border-radius:12px;color:var(--text);font-size:12px
+    }
+
+    .kbd{
+      font-family:ui-monospace,Menlo,Consolas,monospace;
+      font-size:11px;padding:2px 6px;border:1px solid rgba(255,255,255,.18);
+      border-radius:8px;color:var(--muted)
     }
   </style>
 </head>
@@ -107,7 +112,7 @@
   <h1>RxPlain · Traducción farmacoterapéutica a pacientes</h1>
   <p>
     Convierte tratamientos completos (a partir de ficha técnica/SmPC y tu criterio clínico) en una infografía clara, priorizada y útil.
-    Sin APIs · sin pago · funciona en local y en GitHub Pages.
+    <span class="kbd">Sin pago</span> · <span class="kbd">GitHub Pages</span> · <span class="kbd">CIMA (AEMPS) opcional</span>
   </p>
 </header>
 
@@ -191,9 +196,16 @@
   <section class="card">
     <h2>2) Tratamiento completo</h2>
     <p class="tiny">
-      Añade medicamentos uno a uno. Para cada uno, intenta quedarte con lo que realmente usarías en consulta:
-      pauta, “normal notar”, “cuándo avisar”.
+      Puedes añadir medicamentos manualmente o buscarlos en <b>CIMA (AEMPS)</b>.
+      La herramienta no “decide” por ti: tú sigues controlando posología, normal/notar y avisar.
     </p>
+
+    <!-- CIMA SEARCH -->
+    <label>Buscar medicamento en CIMA (AEMPS) (opcional)</label>
+    <input id="cima_query" placeholder="Escribe al menos 3 letras (ej.: atorvast...)" />
+    <div id="cima_results" class="tiny" style="margin-top:8px"></div>
+
+    <hr>
 
     <div class="row">
       <div>
@@ -249,6 +261,9 @@
 </main>
 
 <script>
+  // ======================
+  // Core tool state
+  // ======================
   const meds = [];
   const $ = (id)=>document.getElementById(id);
 
@@ -268,7 +283,10 @@
 
   function renderMedList(){
     $("count").textContent = meds.length.toString();
-    $("medList").innerHTML = meds.map((m,i)=>`• [${i+1}] <b>${escapeHtml(m.name)}</b> — ${escapeHtml(m.dose||"")}`).join("<br>");
+    $("medList").innerHTML = meds.map((m,i)=>{
+      const src = m.cima?.nregistro ? ` · CIMA nregistro ${escapeHtml(m.cima.nregistro)}` : "";
+      return `• [${i+1}] <b>${escapeHtml(m.name)}</b> — ${escapeHtml(m.dose||"")}${src}`;
+    }).join("<br>");
   }
 
   function resetMedInputs(){
@@ -293,6 +311,8 @@
     tags.push({t:`Alfabetización: ${lit}`, cls:""});
     if (hasWarn) tags.push({t:"Alertas presentes", cls:"danger"});
     if (hasNormal) tags.push({t:"Efectos esperables", cls:"warn"});
+    const anyCima = meds.some(m=>m.cima?.nregistro);
+    if (anyCima) tags.push({t:"CIMA (AEMPS)", cls:""});
     return tags;
   }
 
@@ -337,7 +357,6 @@
     const tags = computeTags();
     const topMsgs = pickTopMessages();
 
-    // Tabla alineada (por medicamento)
     const head = `
       <div class="medHead">Medicamento</div>
       <div class="medHead">Cómo tomarlo</div>
@@ -350,6 +369,10 @@
       const warn = (m.warn||[]).length ? (m.warn||[]) : ["Si aparece un síntoma intenso o persistente, consulta."];
       const notes = (m.notes||[]).slice(0,3);
 
+      const cimaLine = m.cima?.nregistro
+        ? `<li><b>Fuente:</b> <a href="${escapeHtml(m.cima.url)}" target="_blank" rel="noopener">CIMA (AEMPS)</a> · nregistro ${escapeHtml(m.cima.nregistro)}</li>`
+        : "";
+
       return `
         <div class="cell">
           <div class="medTitle"><span class="iconBadge">💊</span><div class="medName">${escapeHtml(m.name)}</div></div>
@@ -357,6 +380,7 @@
             ${m.indication ? `<li><b>Para qué:</b> ${escapeHtml(m.indication)}</li>` : ""}
             ${m.benefit ? `<li><b>Clave:</b> ${escapeHtml(m.benefit)}</li>` : ""}
             ${notes.length ? `<li><b>Precauciones:</b> ${notes.map(n=>escapeHtml(n)).join(" · ")}</li>` : ""}
+            ${cimaLine}
           </ul>
         </div>
 
@@ -384,7 +408,6 @@
       `;
     }).join("");
 
-    // Bloque de contacto (solo si hay algo)
     const contactBlock = (pharmName || center || contact || date) ? `
       <div style="margin-top:14px;border:1px solid rgba(2,6,23,.12);border-radius:14px;padding:10px 12px;background:rgba(2,6,23,.03)">
         <div style="font-size:12px;color:#0f172a;margin-bottom:6px"><b>Tu referencia de contacto</b></div>
@@ -431,20 +454,24 @@
       </div>
 
       ${contactBlock}
-
       ${sourcesBlock}
 
       <p class="foot">
-        RxPlain · Versión 0.3 · © Ramón Morillo, febrero 2026 ·
+        RxPlain · Versión 0.4 · © Ramón Morillo, febrero 2026 ·
         Material informativo adaptado al perfil indicado. No sustituye la consulta con profesionales sanitarios.
       </p>
     `;
   }
 
-  // Eventos
+  // ======================
+  // Events: add/generate/print
+  // ======================
   $("addMed").addEventListener("click", ()=>{
     const name = $("m_name").value.trim();
     if (!name) { alert("Falta el nombre del medicamento."); return; }
+
+    // Integración CIMA: si el usuario ha seleccionado un medicamento de CIMA recientemente, lo asociamos.
+    const cima = window.__lastCima ? { ...window.__lastCima } : null;
 
     addMedication({
       name,
@@ -453,8 +480,16 @@
       benefit: $("m_benefit").value.trim(),
       ae: sanitizeLines($("m_ae").value, 8),
       warn: sanitizeLines($("m_warn").value, 8),
-      notes: sanitizeLines($("m_notes").value, 6)
+      notes: sanitizeLines($("m_notes").value, 6),
+      cima: (cima && cima.nombre && (cima.nombre.toLowerCase().includes(name.toLowerCase()) || name.toLowerCase().includes(cima.nombre.toLowerCase())))
+        ? { nregistro: cima.nregistro, url: cima.url_cima }
+        : (cima ? { nregistro: cima.nregistro, url: cima.url_cima } : null)
     });
+
+    // Limpia selección CIMA después de añadir para evitar asignaciones accidentales
+    window.__lastCima = null;
+    $("cima_results").innerHTML = `<div class="tiny">Puedes buscar otro medicamento en CIMA.</div>`;
+
     resetMedInputs();
   });
 
@@ -506,16 +541,24 @@
     renderMedList();
     $("outputWrap").style.display="none";
     $("print").disabled = true;
+
+    // Limpiar inputs de tratamiento
     resetMedInputs();
+    $("cima_query").value = "";
+    $("cima_results").innerHTML = "";
+
+    // Limpiar inputs de perfil
     $("indication").value = "";
     $("goals").value = "";
     $("edu_goal").value = "";
+
+    // Limpiar selección CIMA
+    window.__lastCima = null;
   });
 
   $("loadExample").addEventListener("click", ()=>{
     meds.length=0;
 
-    // Ejemplo RCV (3 fármacos) — demostración
     addMedication({
       name:"Atorvastatina",
       indication:"Reducir colesterol LDL y bajar el riesgo cardiovascular",
@@ -523,7 +566,8 @@
       benefit:"Ayuda a prevenir infarto e ictus a largo plazo",
       ae:["Molestias digestivas leves al inicio","Dolor muscular leve (si aparece, coméntalo)"],
       warn:["Dolor muscular intenso o debilidad marcada","Ictericia u orina muy oscura"],
-      notes:["Evitar pomelo en grandes cantidades","Avisar si se añaden antibióticos nuevos"]
+      notes:["Evitar pomelo en grandes cantidades","Avisar si se añaden antibióticos nuevos"],
+      cima:null
     });
 
     addMedication({
@@ -533,7 +577,8 @@
       benefit:"Reduce el riesgo de complicaciones por hipertensión",
       ae:["Mareo al inicio (levántate despacio)","Aumento de la diuresis"],
       warn:["Hinchazón de cara/labios o dificultad para respirar","Desmayo o mareo intenso persistente"],
-      notes:["Hidratación adecuada","Control analítico según indicación médica"]
+      notes:["Hidratación adecuada","Control analítico según indicación médica"],
+      cima:null
     });
 
     addMedication({
@@ -543,7 +588,8 @@
       benefit:"Ayuda a controlar el azúcar y protege a largo plazo",
       ae:["Náuseas o diarrea al inicio (suele mejorar)"],
       warn:["Vómitos persistentes o gran debilidad","Síntomas intensos tras deshidratación"],
-      notes:["Tomarla con comida reduce molestias","En pruebas con contraste, avisa al equipo sanitario"]
+      notes:["Tomarla con comida reduce molestias","En pruebas con contraste, avisa al equipo sanitario"],
+      cima:null
     });
 
     $("age").value="adulto";
@@ -553,9 +599,97 @@
     $("indication").value="Riesgo cardiovascular elevado";
     $("goals").value="- Controlar presión arterial y LDL\n- Reducir riesgo de eventos cardiovasculares\n- Facilitar adherencia y minimizar efectos adversos";
     $("edu_goal").value="Integra el tratamiento en 2 momentos del día y reconoce señales de alarma reales sin alarmismo.";
+
     renderMedList();
+    $("cima_results").innerHTML = `<div class="tiny">Si quieres, prueba a buscar en CIMA: escribe “atorv” o “metfor”.</div>`;
   });
 
+  // ======================
+  // CIMA (AEMPS) Integration
+  // ======================
+  const CIMA_BASE = "https://cima.aemps.es/cima/rest";
+
+  function debounce(fn, ms){
+    let t; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args), ms); };
+  }
+
+  async function cimaSearchByName(q){
+    const url = `${CIMA_BASE}/medicamentos?nombre=${encodeURIComponent(q)}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("No se pudo consultar CIMA");
+    return res.json();
+  }
+
+  async function cimaGetByNregistro(nregistro){
+    const url = `${CIMA_BASE}/medicamento?nregistro=${encodeURIComponent(nregistro)}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("No se pudo obtener detalle del medicamento");
+    return res.json();
+  }
+
+  function renderCimaResults(items){
+    const box = $("cima_results");
+    if (!items || !items.length){
+      box.innerHTML = `<div class="tiny">Sin resultados.</div>`;
+      return;
+    }
+
+    box.innerHTML = items.slice(0, 8).map((m)=>`
+      <div class="resultItem" data-nregistro="${escapeHtml(m.nregistro||"")}">
+        <div class="resultTitle">${escapeHtml(m.nombre || "Medicamento")}</div>
+        <div class="resultMeta">
+          nregistro: ${escapeHtml(m.nregistro || "—")}
+          ${m.pactivos ? ` · PA: ${escapeHtml(m.pactivos)}` : ""}
+        </div>
+      </div>
+    `).join("");
+
+    [...box.querySelectorAll(".resultItem")].forEach(el=>{
+      el.addEventListener("click", async ()=>{
+        const nregistro = el.getAttribute("data-nregistro");
+        if (!nregistro) return;
+        try{
+          const detail = await cimaGetByNregistro(nregistro);
+          // Rellenar al menos el nombre; el resto lo sigue completando el farmacéutico
+          $("m_name").value = detail.nombre || "";
+
+          // Guardar selección para asociarla al siguiente "Añadir medicamento"
+          window.__lastCima = {
+            nregistro,
+            nombre: detail.nombre || "",
+            url_cima: `https://cima.aemps.es/cima/publico/home.html#medicamento?${encodeURIComponent(nregistro)}`
+          };
+
+          box.innerHTML = `<div class="tiny">Seleccionado: <b>${escapeHtml(detail.nombre || "")}</b> (nregistro ${escapeHtml(nregistro)}). Ahora completa los campos y pulsa “Añadir medicamento”.</div>`;
+        }catch(e){
+          alert("Error al cargar detalle desde CIMA. " + e.message);
+        }
+      });
+    });
+  }
+
+  const onCimaInput = debounce(async ()=>{
+    const q = $("cima_query").value.trim();
+    const box = $("cima_results");
+    if (q.length < 3){
+      box.innerHTML = `<div class="tiny">Escribe al menos 3 letras para buscar.</div>`;
+      return;
+    }
+    box.innerHTML = `<div class="tiny">Buscando en CIMA…</div>`;
+    try{
+      const data = await cimaSearchByName(q);
+      // Normalmente devuelve array; dejamos fallback por si cambia
+      const items = Array.isArray(data) ? data : (data?.resultados || data?.items || []);
+      renderCimaResults(items);
+    }catch(e){
+      box.innerHTML = `<div class="tiny">No se pudo consultar CIMA. Si persiste, revisa conexión o prueba más tarde.</div>`;
+    }
+  }, 350);
+
+  $("cima_query").addEventListener("input", onCimaInput);
+
+  // Init
+  $("cima_results").innerHTML = `<div class="tiny">Escribe un nombre para buscar en CIMA (opcional).</div>`;
 </script>
 </body>
 </html>
