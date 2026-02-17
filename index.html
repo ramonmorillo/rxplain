@@ -105,19 +105,22 @@
       border-radius:8px;color:var(--muted)
     }
 
-    /* CIMA Images section */
-    #cima_fotos{margin-top:10px}
-    .cimaFotosSection{margin-top:6px}
-    .cimaFotosSection h3{font-size:13px;margin:0 0 8px;color:var(--text)}
-    .cimaFotosGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px}
-    .cimaFotoCard{
+    /* ── CIMA Images panel (sección independiente) ── */
+    .cimaImgPanel{display:none;grid-column:1/-1}
+    .cimaImgPanel h2{display:flex;align-items:center;gap:8px}
+    .cimaImgPanel__group{margin-top:10px}
+    .cimaImgPanel__group h3{font-size:13px;margin:0 0 8px;color:var(--text)}
+    .cimaImgPanel__grid{
+      display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px
+    }
+    .cimaImgPanel__card{
       border:1px solid var(--border);border-radius:12px;overflow:hidden;
       background:rgba(255,255,255,.06);cursor:pointer;transition:border-color .15s
     }
-    .cimaFotoCard:hover{border-color:var(--accent)}
-    .cimaFotoCard img{width:100%;height:auto;display:block}
-    .cimaFotosMsg{font-size:12px;color:var(--muted);padding:4px 0}
-    .cimaFotosLoading{font-size:12px;color:var(--muted);padding:8px 0}
+    .cimaImgPanel__card:hover{border-color:var(--accent)}
+    .cimaImgPanel__card img{width:100%;aspect-ratio:1/1;object-fit:cover;display:block}
+    .cimaImgPanel__msg{font-size:12px;color:var(--muted);padding:6px 0}
+    .cimaImgPanel__loading{font-size:12px;color:var(--muted);padding:10px 0}
 
     /* CIMA Image modal */
     .cimaModal{
@@ -232,7 +235,6 @@
     <label>Buscar medicamento en CIMA (AEMPS) (opcional)</label>
     <input id="cima_query" placeholder="Escribe al menos 3 letras (ej.: atorvast...)" />
     <div id="cima_results" class="tiny" style="margin-top:8px"></div>
-    <div id="cima_fotos"></div>
 
     <hr>
 
@@ -277,6 +279,14 @@
     <div class="btns">
       <button id="generate">Generar infografía</button>
       <button class="secondary" id="print" disabled>Imprimir / Guardar PDF</button>
+    </div>
+  </section>
+
+  <!-- IMÁGENES CIMA (sección independiente, full-width) -->
+  <section class="card cimaImgPanel" id="cimaImgPanel">
+    <h2>Imagenes del medicamento (CIMA-AEMPS)</h2>
+    <div id="cimaImgBody">
+      <!-- Contenido inyectado por JS: loading / fotos / mensaje vacío / error -->
     </div>
   </section>
 
@@ -524,7 +534,7 @@
     // Limpia selección CIMA después de añadir para evitar asignaciones accidentales
     window.__lastCima = null;
     $("cima_results").innerHTML = `<div class="tiny">Puedes buscar otro medicamento en CIMA.</div>`;
-    $("cima_fotos").innerHTML = "";
+    hideCimaImgPanel();
 
     resetMedInputs();
   });
@@ -590,7 +600,7 @@
 
     // Limpiar selección CIMA y fotos
     window.__lastCima = null;
-    $("cima_fotos").innerHTML = "";
+    hideCimaImgPanel();
   });
 
   $("loadExample").addEventListener("click", ()=>{
@@ -710,28 +720,43 @@
   }
 
   /**
-   * Renderiza las fotos de CIMA en #cima_fotos.
-   * Se llama al seleccionar un medicamento del listado de resultados CIMA.
+   * Muestra el panel de imágenes CIMA (#cimaImgPanel).
+   */
+  function showCimaImgPanel(){ $("cimaImgPanel").style.display = "block"; }
+
+  /**
+   * Oculta y limpia el panel de imágenes CIMA.
+   */
+  function hideCimaImgPanel(){
+    $("cimaImgPanel").style.display = "none";
+    $("cimaImgBody").innerHTML = "";
+  }
+
+  /**
+   * Renderiza las fotos de CIMA dentro del panel independiente #cimaImgPanel.
+   * Se invoca al seleccionar un medicamento del listado de resultados CIMA.
    * @param {Array} fotos - campo "fotos" del detalle del medicamento
    * @param {string} nombre - nombre del medicamento (para alt text)
    */
   function renderCimaFotos(fotos, nombre){
-    const container = $("cima_fotos");
+    const body = $("cimaImgBody");
     const { formaFarmac, materialAs } = clasificarFotosCima(fotos);
 
+    // Sin fotos → mensaje discreto y ocultar panel
     if (!formaFarmac.length && !materialAs.length){
-      container.innerHTML = `<div class="cimaFotosMsg">CIMA no dispone de imágenes para este medicamento/presentación.</div>`;
+      body.innerHTML = `<div class="cimaImgPanel__msg">CIMA no dispone de imágenes para este medicamento/presentación.</div>`;
+      showCimaImgPanel();
       return;
     }
 
-    let html = `<div style="font-size:13px;font-weight:700;color:var(--text);margin:10px 0 6px">Imágenes (CIMA-AEMPS)</div>`;
+    let html = "";
 
     if (formaFarmac.length){
-      html += `<div class="cimaFotosSection">
+      html += `<div class="cimaImgPanel__group">
         <h3>Forma farmacéutica</h3>
-        <div class="cimaFotosGrid">
+        <div class="cimaImgPanel__grid">
           ${formaFarmac.map(f => `
-            <div class="cimaFotoCard" data-full="${escapeHtml(f.url || "")}">
+            <div class="cimaImgPanel__card" data-full="${escapeHtml(f.url || "")}">
               <img src="${escapeHtml(f.url || "")}" alt="Forma farmacéutica – ${escapeHtml(nombre)}" loading="lazy" />
             </div>
           `).join("")}
@@ -740,11 +765,11 @@
     }
 
     if (materialAs.length){
-      html += `<div class="cimaFotosSection" style="margin-top:10px">
+      html += `<div class="cimaImgPanel__group">
         <h3>Material de acondicionamiento</h3>
-        <div class="cimaFotosGrid">
+        <div class="cimaImgPanel__grid">
           ${materialAs.map(f => `
-            <div class="cimaFotoCard" data-full="${escapeHtml(f.url || "")}">
+            <div class="cimaImgPanel__card" data-full="${escapeHtml(f.url || "")}">
               <img src="${escapeHtml(f.url || "")}" alt="Acondicionamiento – ${escapeHtml(nombre)}" loading="lazy" />
             </div>
           `).join("")}
@@ -752,10 +777,11 @@
       </div>`;
     }
 
-    container.innerHTML = html;
+    body.innerHTML = html;
+    showCimaImgPanel();
 
     // Vincular click para ampliar en modal
-    [...container.querySelectorAll(".cimaFotoCard")].forEach(card => {
+    [...body.querySelectorAll(".cimaImgPanel__card")].forEach(card => {
       card.addEventListener("click", () => {
         const src = card.getAttribute("data-full");
         if (src) openCimaModal(src);
@@ -793,7 +819,7 @@
     const box = $("cima_results");
     if (!items || !items.length){
       box.innerHTML = `<div class="tiny">Sin resultados.</div>`;
-      $("cima_fotos").innerHTML = "";
+      hideCimaImgPanel();
       return;
     }
 
@@ -808,7 +834,7 @@
     `).join("");
 
     // Limpiar fotos previas al mostrar nuevos resultados
-    $("cima_fotos").innerHTML = "";
+    hideCimaImgPanel();
 
     [...box.querySelectorAll(".resultItem")].forEach(el=>{
       el.addEventListener("click", async ()=>{
@@ -816,7 +842,8 @@
         if (!nregistro) return;
 
         // Estado de carga para imágenes
-        $("cima_fotos").innerHTML = `<div class="cimaFotosLoading">Cargando imágenes desde CIMA…</div>`;
+        $("cimaImgBody").innerHTML = `<div class="cimaImgPanel__loading">Cargando imagenes desde CIMA…</div>`;
+        showCimaImgPanel();
 
         try{
           const detail = await cimaGetByNregistro(nregistro);
@@ -837,7 +864,8 @@
           renderCimaFotos(detail.fotos || [], detail.nombre || "");
 
         }catch(e){
-          $("cima_fotos").innerHTML = `<div class="cimaFotosMsg">No se pudieron cargar las imágenes. ${escapeHtml(e.message)}</div>`;
+          $("cimaImgBody").innerHTML = `<div class="cimaImgPanel__msg">No se pudieron cargar las imagenes. ${escapeHtml(e.message)}</div>`;
+          showCimaImgPanel();
           alert("Error al cargar detalle desde CIMA. " + e.message);
         }
       });
@@ -849,7 +877,7 @@
     const box = $("cima_results");
     if (q.length < 3){
       box.innerHTML = `<div class="tiny">Escribe al menos 3 letras para buscar.</div>`;
-      $("cima_fotos").innerHTML = "";
+      hideCimaImgPanel();
       return;
     }
     box.innerHTML = `<div class="tiny">Buscando en CIMA…</div>`;
@@ -860,7 +888,7 @@
       renderCimaResults(items);
     }catch(e){
       box.innerHTML = `<div class="tiny">No se pudo consultar CIMA. Si persiste, revisa conexión o prueba más tarde.</div>`;
-      $("cima_fotos").innerHTML = "";
+      hideCimaImgPanel();
     }
   }, 350);
 
