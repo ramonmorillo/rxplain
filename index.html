@@ -104,6 +104,34 @@
       font-size:11px;padding:2px 6px;border:1px solid rgba(255,255,255,.18);
       border-radius:8px;color:var(--muted)
     }
+
+    /* CIMA Images section */
+    #cima_fotos{margin-top:10px}
+    .cimaFotosSection{margin-top:6px}
+    .cimaFotosSection h3{font-size:13px;margin:0 0 8px;color:var(--text)}
+    .cimaFotosGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px}
+    .cimaFotoCard{
+      border:1px solid var(--border);border-radius:12px;overflow:hidden;
+      background:rgba(255,255,255,.06);cursor:pointer;transition:border-color .15s
+    }
+    .cimaFotoCard:hover{border-color:var(--accent)}
+    .cimaFotoCard img{width:100%;height:auto;display:block}
+    .cimaFotosMsg{font-size:12px;color:var(--muted);padding:4px 0}
+    .cimaFotosLoading{font-size:12px;color:var(--muted);padding:8px 0}
+
+    /* CIMA Image modal */
+    .cimaModal{
+      position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;
+      background:rgba(0,0,0,.82);cursor:zoom-out;opacity:0;transition:opacity .2s;pointer-events:none
+    }
+    .cimaModal.open{opacity:1;pointer-events:auto}
+    .cimaModal img{max-width:90vw;max-height:85vh;border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,.5)}
+    .cimaModalClose{
+      position:fixed;top:16px;right:20px;z-index:10000;
+      background:rgba(255,255,255,.15);border:none;color:#fff;font-size:24px;
+      width:40px;height:40px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center
+    }
+    .cimaModalClose:hover{background:rgba(255,255,255,.3)}
   </style>
 </head>
 
@@ -204,6 +232,7 @@
     <label>Buscar medicamento en CIMA (AEMPS) (opcional)</label>
     <input id="cima_query" placeholder="Escribe al menos 3 letras (ej.: atorvast...)" />
     <div id="cima_results" class="tiny" style="margin-top:8px"></div>
+    <div id="cima_fotos"></div>
 
     <hr>
 
@@ -259,6 +288,12 @@
     <div id="output" class="infografia" aria-label="Infografía RxPlain"></div>
   </section>
 </main>
+
+<!-- Modal para ampliar imágenes CIMA -->
+<div class="cimaModal" id="cimaModal">
+  <button class="cimaModalClose" id="cimaModalClose" aria-label="Cerrar">×</button>
+  <img id="cimaModalImg" src="" alt="Imagen ampliada" />
+</div>
 
 <script>
   // ======================
@@ -489,6 +524,7 @@
     // Limpia selección CIMA después de añadir para evitar asignaciones accidentales
     window.__lastCima = null;
     $("cima_results").innerHTML = `<div class="tiny">Puedes buscar otro medicamento en CIMA.</div>`;
+    $("cima_fotos").innerHTML = "";
 
     resetMedInputs();
   });
@@ -552,8 +588,9 @@
     $("goals").value = "";
     $("edu_goal").value = "";
 
-    // Limpiar selección CIMA
+    // Limpiar selección CIMA y fotos
     window.__lastCima = null;
+    $("cima_fotos").innerHTML = "";
   });
 
   $("loadExample").addEventListener("click", ()=>{
@@ -607,30 +644,156 @@
   // ======================
   // CIMA (AEMPS) Integration
   // ======================
-  const CIMA_BASE = "https://cima.aemps.es/cima/rest";
+
+  /*
+   * Configuración de la URL base para la API de CIMA.
+   *
+   * Estrategia CORS / proxy:
+   *   1. Por defecto se usa la URL directa de CIMA (funciona si AEMPS permite CORS).
+   *   2. Si falla por CORS, se puede cambiar CIMA_API_BASE a la URL de un
+   *      Cloudflare Worker u otro proxy que reenvíe las peticiones a CIMA
+   *      sin almacenar datos. Ejemplo:
+   *        const CIMA_API_BASE = "https://mi-worker.mi-dominio.workers.dev/cima/rest";
+   *   3. El resto del código no necesita cambios: todas las llamadas usan CIMA_API_BASE.
+   */
+  const CIMA_API_BASE = "https://cima.aemps.es/cima/rest";
 
   function debounce(fn, ms){
     let t; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args), ms); };
   }
 
   async function cimaSearchByName(q){
-    const url = `${CIMA_BASE}/medicamentos?nombre=${encodeURIComponent(q)}`;
+    const url = `${CIMA_API_BASE}/medicamentos?nombre=${encodeURIComponent(q)}`;
     const res = await fetch(url);
     if (!res.ok) throw new Error("No se pudo consultar CIMA");
     return res.json();
   }
 
   async function cimaGetByNregistro(nregistro){
-    const url = `${CIMA_BASE}/medicamento?nregistro=${encodeURIComponent(nregistro)}`;
+    const url = `${CIMA_API_BASE}/medicamento?nregistro=${encodeURIComponent(nregistro)}`;
     const res = await fetch(url);
     if (!res.ok) throw new Error("No se pudo obtener detalle del medicamento");
     return res.json();
   }
 
+  // ======================
+  // Imágenes CIMA (AEMPS)
+  // ======================
+
+  /*
+   * Estrategia de resolución de identificadores para obtener fotos:
+   *
+   * - El endpoint principal es GET /medicamento?nregistro=XXXXX, que devuelve
+   *   el campo "fotos" (array) con las imágenes del medicamento.
+   * - El nregistro se obtiene de la selección previa en la búsqueda CIMA.
+   * - Si solo se dispone de un CN (Código Nacional), CIMA no lo acepta
+   *   directamente en este endpoint. En ese caso la app busca primero
+   *   por nombre (GET /medicamentos?nombre=...) para localizar el nregistro
+   *   y después consulta el detalle. Actualmente el flujo de la app siempre
+   *   pasa por la búsqueda, por lo que el nregistro está disponible.
+   *
+   * Tipos de fotos filtrados:
+   *   - "formafarmac": forma farmacéutica (prioridad, bloque principal)
+   *   - "materialas": material de acondicionamiento (bloque secundario)
+   */
+
+  /**
+   * Extrae y clasifica las fotos de la respuesta de CIMA.
+   * @param {Array} fotos - campo "fotos" del objeto medicamento de CIMA
+   * @returns {{ formaFarmac: Array, materialAs: Array }}
+   */
+  function clasificarFotosCima(fotos){
+    if (!Array.isArray(fotos) || !fotos.length) return { formaFarmac: [], materialAs: [] };
+    const formaFarmac = fotos.filter(f => f.tipo === "formafarmac");
+    const materialAs  = fotos.filter(f => f.tipo === "materialas");
+    return { formaFarmac, materialAs };
+  }
+
+  /**
+   * Renderiza las fotos de CIMA en #cima_fotos.
+   * Se llama al seleccionar un medicamento del listado de resultados CIMA.
+   * @param {Array} fotos - campo "fotos" del detalle del medicamento
+   * @param {string} nombre - nombre del medicamento (para alt text)
+   */
+  function renderCimaFotos(fotos, nombre){
+    const container = $("cima_fotos");
+    const { formaFarmac, materialAs } = clasificarFotosCima(fotos);
+
+    if (!formaFarmac.length && !materialAs.length){
+      container.innerHTML = `<div class="cimaFotosMsg">CIMA no dispone de imágenes para este medicamento/presentación.</div>`;
+      return;
+    }
+
+    let html = `<div style="font-size:13px;font-weight:700;color:var(--text);margin:10px 0 6px">Imágenes (CIMA-AEMPS)</div>`;
+
+    if (formaFarmac.length){
+      html += `<div class="cimaFotosSection">
+        <h3>Forma farmacéutica</h3>
+        <div class="cimaFotosGrid">
+          ${formaFarmac.map(f => `
+            <div class="cimaFotoCard" data-full="${escapeHtml(f.url || "")}">
+              <img src="${escapeHtml(f.url || "")}" alt="Forma farmacéutica – ${escapeHtml(nombre)}" loading="lazy" />
+            </div>
+          `).join("")}
+        </div>
+      </div>`;
+    }
+
+    if (materialAs.length){
+      html += `<div class="cimaFotosSection" style="margin-top:10px">
+        <h3>Material de acondicionamiento</h3>
+        <div class="cimaFotosGrid">
+          ${materialAs.map(f => `
+            <div class="cimaFotoCard" data-full="${escapeHtml(f.url || "")}">
+              <img src="${escapeHtml(f.url || "")}" alt="Acondicionamiento – ${escapeHtml(nombre)}" loading="lazy" />
+            </div>
+          `).join("")}
+        </div>
+      </div>`;
+    }
+
+    container.innerHTML = html;
+
+    // Vincular click para ampliar en modal
+    [...container.querySelectorAll(".cimaFotoCard")].forEach(card => {
+      card.addEventListener("click", () => {
+        const src = card.getAttribute("data-full");
+        if (src) openCimaModal(src);
+      });
+    });
+  }
+
+  // ======================
+  // Modal para ampliar imágenes
+  // ======================
+  function openCimaModal(src){
+    const modal = $("cimaModal");
+    const img = $("cimaModalImg");
+    img.src = src;
+    modal.classList.add("open");
+  }
+
+  function closeCimaModal(){
+    const modal = $("cimaModal");
+    modal.classList.remove("open");
+    $("cimaModalImg").src = "";
+  }
+
+  $("cimaModal").addEventListener("click", (e) => {
+    // Cerrar al hacer click fuera de la imagen
+    if (e.target === $("cimaModal") || e.target === $("cimaModalClose")) closeCimaModal();
+  });
+  $("cimaModalClose").addEventListener("click", closeCimaModal);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeCimaModal(); });
+
+  // ======================
+  // Búsqueda y selección CIMA
+  // ======================
   function renderCimaResults(items){
     const box = $("cima_results");
     if (!items || !items.length){
       box.innerHTML = `<div class="tiny">Sin resultados.</div>`;
+      $("cima_fotos").innerHTML = "";
       return;
     }
 
@@ -644,10 +807,17 @@
       </div>
     `).join("");
 
+    // Limpiar fotos previas al mostrar nuevos resultados
+    $("cima_fotos").innerHTML = "";
+
     [...box.querySelectorAll(".resultItem")].forEach(el=>{
       el.addEventListener("click", async ()=>{
         const nregistro = el.getAttribute("data-nregistro");
         if (!nregistro) return;
+
+        // Estado de carga para imágenes
+        $("cima_fotos").innerHTML = `<div class="cimaFotosLoading">Cargando imágenes desde CIMA…</div>`;
+
         try{
           const detail = await cimaGetByNregistro(nregistro);
           // Rellenar al menos el nombre; el resto lo sigue completando el farmacéutico
@@ -657,11 +827,17 @@
           window.__lastCima = {
             nregistro,
             nombre: detail.nombre || "",
-            url_cima: `https://cima.aemps.es/cima/publico/home.html#medicamento?${encodeURIComponent(nregistro)}`
+            url_cima: `https://cima.aemps.es/cima/publico/home.html#medicamento?${encodeURIComponent(nregistro)}`,
+            fotos: detail.fotos || []
           };
 
-          box.innerHTML = `<div class="tiny">Seleccionado: <b>${escapeHtml(detail.nombre || "")}</b> (nregistro ${escapeHtml(nregistro)}). Ahora completa los campos y pulsa “Añadir medicamento”.</div>`;
+          box.innerHTML = `<div class="tiny">Seleccionado: <b>${escapeHtml(detail.nombre || "")}</b> (nregistro ${escapeHtml(nregistro)}). Ahora completa los campos y pulsa "Añadir medicamento".</div>`;
+
+          // Renderizar imágenes del medicamento seleccionado
+          renderCimaFotos(detail.fotos || [], detail.nombre || "");
+
         }catch(e){
+          $("cima_fotos").innerHTML = `<div class="cimaFotosMsg">No se pudieron cargar las imágenes. ${escapeHtml(e.message)}</div>`;
           alert("Error al cargar detalle desde CIMA. " + e.message);
         }
       });
@@ -673,6 +849,7 @@
     const box = $("cima_results");
     if (q.length < 3){
       box.innerHTML = `<div class="tiny">Escribe al menos 3 letras para buscar.</div>`;
+      $("cima_fotos").innerHTML = "";
       return;
     }
     box.innerHTML = `<div class="tiny">Buscando en CIMA…</div>`;
@@ -683,6 +860,7 @@
       renderCimaResults(items);
     }catch(e){
       box.innerHTML = `<div class="tiny">No se pudo consultar CIMA. Si persiste, revisa conexión o prueba más tarde.</div>`;
+      $("cima_fotos").innerHTML = "";
     }
   }, 350);
 
