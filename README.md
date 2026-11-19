@@ -24,7 +24,7 @@ Genera una infografía imprimible de la medicación del paciente. Incluye una co
 Declaración, comprobada con una búsqueda en el código (`js/`, `data/`, `index.html`, `css/`):
 
 - **No se guarda nada del paciente.** No hay uso de `localStorage`, `sessionStorage`, cookies ni IndexedDB. Al recargar la página los datos introducidos desaparecen.
-- **No hay comunicaciones de red**, salvo la consulta opcional ya existente a la API pública de CIMA/AEMPS (`https://cima.aemps.es/cima/rest`) desde la pestaña Infografía (`js/infografia.js`). La pestaña Calendario no realiza ninguna petición de red.
+- **No hay comunicaciones de red**, salvo la consulta opcional ya existente a la API pública de CIMA/AEMPS (`https://cima.aemps.es/cima/rest`) desde la pestaña Infografía (`js/infografia.js`). La sub-pestaña Fármacos del Calendario (`js/cima.js`, `js/farmacos-view.js`) consulta la misma API solo al pulsar Buscar o elegir un resultado, enviando únicamente el nombre del fármaco o su nº de registro; el resto del Calendario no realiza peticiones de red.
 - No hay analítica, CDN, fuentes externas ni scripts de terceros. Los enlaces a EMA, AEMPS, CIMA y SEFH de la infografía son enlaces que abre el usuario.
 
 Esta declaración describe el código del repositorio. Si se modifica el código, debe volver a verificarse.
@@ -88,6 +88,8 @@ css/rxplain.css            Estilos de la infografía
 css/calendario.css         Estilos de la pestaña Calendario y de la hoja impresa
 js/infografia.js           Infografía y consulta opcional a CIMA
 js/tabs.js                 Pestañas
+js/cima.js                 Cliente CIMA/AEMPS (búsqueda y apartado 4.2; `fetch` inyectable)
+js/farmacos-view.js        Sub-pestaña Fármacos
 js/schedule-engine.js      Motor de calendarización (fechas, festivos)
 js/regimen-data.js         Registro y validador de esquemas
 js/calendario-view.js      Interfaz de la pestaña Calendario (incluye los avisos y la detección de conflictos)
@@ -96,6 +98,12 @@ data/regimens/             Esquemas (+ helpers.js)
 tests/                     Pruebas (node --test)
 docs/superpowers/          Especificación y plan del desarrollo
 ```
+
+## Fármacos y CIMA
+
+La sub-pestaña **Fármacos** busca un medicamento en CIMA/AEMPS (`/medicamentos?nombre=…`), muestra nombre, principio activo, forma y enlace a CIMA, y al elegir uno carga el apartado 4.2 de la ficha técnica (`/docSegmentado/contenido/1?nregistro=…&seccion=4.2`). El «fármaco normalizado» (principio activo + nº de registro) se guarda solo en memoria.
+
+**Limitaciones:** no ha podido probarse contra CIMA real (el entorno de desarrollo no tiene acceso); los tests usan respuestas simuladas. El formato del endpoint `docSegmentado` no está verificado, por lo que el código acepta JSON o HTML/texto y, si falla o viene vacío, muestra un aviso y el enlace a la ficha técnica en CIMA. El texto del 4.2 es solo orientativo: la ficha oficial manda. La llamada solo ocurre al pulsar Buscar/Enter o al elegir un resultado, y nunca incluye datos del paciente.
 
 ## Publicación
 

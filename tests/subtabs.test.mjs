@@ -61,7 +61,7 @@ test("todos los ids anteriores siguen en el DOM y Fármacos muestra Próximament
   assert.ok(d.querySelector("#sub-esquemas #cal_constructor"));
   assert.ok(d.querySelector("#sub-calendario #cal_meses"));
   assert.ok(d.querySelector("#sub-informe #cal_imprimir"));
-  assert.match(d.querySelector("#sub-farmacos #farmacos_root").textContent, /Próximamente/);
+  assert.ok(d.querySelector("#sub-farmacos #farmacos_root"));
   dom.window.close();
 });
 

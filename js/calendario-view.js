@@ -188,6 +188,9 @@
       '<label>Identificador del paciente (opcional, no se guarda) <input id="cal_paciente" type="text" autocomplete="off"></label> ' +
       '<button type="button" id="cal_imprimir" class="btn">Imprimir hoja del paciente</button></form></section>';
 
+    var farRoot = root.querySelector("#farmacos_root");
+    if (farRoot && window.RxFarmacos && window.RxCima) window.RxFarmacos.mount(farRoot);
+
     function goSub(name) { if (window.RxSubtabs) window.RxSubtabs.show(name); }
 
     var selEl = root.querySelector("#cal_esquema");
