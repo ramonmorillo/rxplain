@@ -85,22 +85,83 @@ test("fecha vacía: no imprime y avisa", async () => {
   dom.window.close();
 });
 
-test("privacidad: nada en storage ni fetch", async () => {
-  const dom = await loadPage();
-  let fetches = 0, writes = 0;
-  const orig = dom.window.Storage && dom.window.Storage.prototype.setItem;
-  if (orig) dom.window.Storage.prototype.setItem = function () { writes++; };
-  dom.window.fetch = () => { fetches++; return Promise.resolve(); };
+test("privacidad: nada en storage, cookies ni red", async () => {
+  const writes = [];
+  const dom = await loadPage({
+    beforeParse(w) {
+      // file:// no expone Storage real en jsdom: se definen almacenes falsos que registran cualquier escritura.
+      for (const k of ["localStorage", "sessionStorage"]) {
+        const data = {};
+        const fake = new Proxy(data, {
+          set(t, p, v) { writes.push(k + ":" + String(p)); t[p] = v; return true; },
+          get(t, p) {
+            if (p === "length") return Object.keys(t).length;
+            if (["setItem", "removeItem", "clear"].includes(p)) return () => { writes.push(k + "." + p); };
+            if (p === "getItem") return (x) => (x in t ? t[x] : null);
+            return t[p];
+          },
+        });
+        Object.defineProperty(w, k, { configurable: true, get: () => fake });
+      }
+      const desc = Object.getOwnPropertyDescriptor(w.Document.prototype, "cookie");
+      Object.defineProperty(w.document, "cookie", { configurable: true, get() { return desc.get.call(this); }, set(v) { writes.push("cookie"); desc.set.call(this, v); } });
+      w.__net = 0;
+      w.fetch = () => { w.__net++; return Promise.resolve(); };
+      w.XMLHttpRequest = function () { w.__net++; };
+      w.navigator.sendBeacon = () => { w.__net++; return true; };
+      w.WebSocket = function () { w.__net++; };
+    },
+  });
   const d = await fill(dom);
   dom.window.print = () => {};
   d.getElementById("cal_imprimir").click();
   dom.window.dispatchEvent(new dom.window.Event("afterprint"));
-  // jsdom con file:// no expone localStorage: se vigila además Storage.prototype.
-  for (const k of ["localStorage", "sessionStorage"]) {
-    let st; try { st = dom.window[k]; } catch (e) { st = undefined; }
-    if (st) assert.equal(st.length, 0);
-  }
-  assert.equal(writes, 0);
-  assert.equal(fetches, 0);
+  assert.equal(dom.window.localStorage.length, 0);
+  assert.equal(dom.window.sessionStorage.length, 0);
+  assert.deepEqual(writes, []);
+  assert.equal(d.cookie, "");
+  assert.equal(dom.window.__net, 0);
+  assert.deepEqual(dom.errors, []);
+  dom.window.close();
+});
+
+test("print que lanza: limpia atributo y hoja sin error", async () => {
+  const dom = await loadPage();
+  const d = await fill(dom);
+  dom.window.print = () => { throw new Error("bloqueado"); };
+  d.getElementById("cal_imprimir").click();
+  assert.equal(d.body.dataset.printing, undefined);
+  assert.equal(d.getElementById("hojaPaciente").innerHTML, "");
+  assert.deepEqual(dom.errors, []);
+  dom.window.close();
+});
+
+test("dos clics sin afterprint: un afterprint lo limpia todo", async () => {
+  const dom = await loadPage();
+  const d = await fill(dom);
+  let calls = 0;
+  dom.window.print = () => { calls++; };
+  const add = dom.window.addEventListener.bind(dom.window);
+  let n = 0;
+  dom.window.addEventListener = (t, ...r) => { if (t === "afterprint") n++; return add(t, ...r); };
+  d.getElementById("cal_imprimir").click();
+  d.getElementById("cal_imprimir").click();
+  assert.equal(calls, 2);
+  dom.window.dispatchEvent(new dom.window.Event("afterprint"));
+  assert.equal(d.body.dataset.printing, undefined);
+  assert.equal(d.getElementById("hojaPaciente").innerHTML, "");
+  assert.ok(n <= 2);
+  dom.window.close();
+});
+
+test("cambiar a Infografía tras imprimir sin afterprint limpia todo", async () => {
+  const dom = await loadPage();
+  const d = await fill(dom);
+  dom.window.print = () => {};
+  d.getElementById("cal_imprimir").click();
+  assert.equal(d.body.dataset.printing, "calendario");
+  d.getElementById("tab-btn-infografia").click();
+  assert.equal(d.body.dataset.printing, undefined);
+  assert.equal(d.getElementById("hojaPaciente").innerHTML, "");
   dom.window.close();
 });

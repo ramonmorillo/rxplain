@@ -4,12 +4,13 @@ import path from "node:path";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 
-export async function loadPage() {
+export async function loadPage(opts = {}) {
   const errors = [];
   const virtualConsole = new VirtualConsole();
   virtualConsole.on("jsdomError", (e) => errors.push(String((e && e.stack) || e)));
   const dom = await JSDOM.fromFile(path.join(root, "index.html"), {
-    url: pathToFileURL(path.join(root, "index.html")).href,
+    url: opts.url || pathToFileURL(path.join(root, "index.html")).href,
+    beforeParse: opts.beforeParse,
     runScripts: "dangerously",
     resources: "usable",
     pretendToBeVisual: true,

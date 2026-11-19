@@ -213,6 +213,7 @@
         avisosEl.innerHTML = '<p class="aviso">Indique una fecha de inicio válida.</p>';
         return;
       }
+      limpiarHoja();
       var host = document.getElementById("hojaPaciente");
       if (!host || !window.RxSheet) return;
       host.innerHTML = window.RxSheet.buildSheetHTML(b.schedule, b.r, {
@@ -220,13 +221,27 @@
         profesional: { nombre: val("pharm_name"), centro: val("center"), contacto: val("contact"), fecha: val("date") }
       });
       document.body.dataset.printing = "calendario";
-      window.addEventListener("afterprint", function done() {
-        window.removeEventListener("afterprint", done);
-        delete document.body.dataset.printing;
-        host.innerHTML = "";
-      });
-      window.print();
+      host.hidden = false;
+      window.addEventListener("afterprint", limpiarHoja, { once: true });
+      try {
+        window.print();
+      } catch (err) {
+        limpiarHoja();
+      }
     }
+
+    // Una sola limpieza compartida: quita el modo impresión y los datos del paciente del DOM.
+    function limpiarHoja() {
+      window.removeEventListener("afterprint", limpiarHoja);
+      delete document.body.dataset.printing;
+      var host = document.getElementById("hojaPaciente");
+      if (host) { host.innerHTML = ""; host.hidden = true; }
+    }
+    // Si afterprint no llega, ningún cambio de pestaña ni la impresión de la infografía puede heredar la hoja.
+    document.addEventListener("click", function (e) {
+      var t = e.target && e.target.closest ? e.target.closest("#tabs [role=tab], #print") : null;
+      if (t) limpiarHoja();
+    }, true);
     root.querySelector("#cal_imprimir").addEventListener("click", imprimir);
 
     selEl.addEventListener("change", function () { resetForRegimen(); paint(true); });
