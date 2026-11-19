@@ -1,6 +1,7 @@
 (function () {
   var RX = typeof RxData !== "undefined" ? RxData : require("../../js/regimen-data.js");
-  var H = typeof RxHelpers !== "undefined" ? RxHelpers : require("./_helpers.js");
+  var H = typeof RxHelpers !== "undefined" ? RxHelpers : (typeof require === "function" ? require("./helpers.js") : null);
+  if (!H) { if (typeof console !== "undefined") console.error("RxHelpers no disponible: data/regimens/helpers.js no se cargó; esquema omitido."); return; }
   var isa = H.isa, cfz = H.cfz, dexC = H.dexC;
   RX.register({
     id: "mieloma-isa-kd",
