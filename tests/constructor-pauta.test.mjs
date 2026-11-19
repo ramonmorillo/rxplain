@@ -274,3 +274,10 @@ test("vista: la hoja imprime '2 veces al día' y las etiquetas aclaran el día 0
   assert.match(d.querySelector("#cal_constructor p[role=alert]").textContent, /veces al día/);
   dom.window.close();
 });
+
+test("indefinida: la casilla del formulario marca duracion indefinida; por defecto no", () => {
+  reset();
+  assert.equal(RxBuilder.buildRegimen(formCiclos()).duracion, undefined);
+  assert.equal(RxBuilder.buildRegimen(formCiclos({ indefinida: true })).duracion, "indefinida");
+  assert.equal(RxBuilder.buildRegimen(formIntervalo({ indefinida: true })).duracion, "indefinida");
+});

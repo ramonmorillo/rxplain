@@ -214,6 +214,14 @@
       (regimen.linea ? " · " + esc(regimen.linea) : "") +
       (first ? " · <strong>Inicio:</strong> " + esc(fmtLong(first)) : "") +
       (nCiclos ? " · <strong>Ciclos:</strong> " + nCiclos : " · <strong>Dosis:</strong> " + g.dates.length) + "</p>";
+    if (ctx.indefinida) {
+      html += '<p class="hoja-indefinida"><strong>Pauta indefinida:</strong> se continúa hasta que su médico indique otra cosa.' +
+        (validIso(ctx.hasta) ? " Este calendario llega hasta el " + esc(ctx.hasta.slice(8) + "/" + ctx.hasta.slice(5, 7) + "/" + ctx.hasta.slice(0, 4)) + "." : "") + "</p>";
+      if (schedule.recortadoHasta && validIso(schedule.recortadoHasta)) {
+        var rc = schedule.recortadoHasta;
+        html += '<p class="hoja-recorte"><strong>Calendario recortado hasta ' + esc(rc.slice(8) + "/" + rc.slice(5, 7) + "/" + rc.slice(0, 4)) + ".</strong></p>";
+      }
+    }
     html += proximas(events, first, validIso(ctx.hoy) ? ctx.hoy : hoyLocal());
     html += "<h2>Días que tiene que venir al hospital</h2>" + hospitalTable(g, pendiente);
     html += "<h2>Medicación en casa</h2>" + homeMeds(events, regimen, pendiente);

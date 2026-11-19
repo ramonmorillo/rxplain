@@ -159,6 +159,7 @@
     } else {
       r.fases = [{ desde: 1, hasta: null, duracion: cicloDias, etiqueta: "Pauta propia", items: items }];
     }
+    if (form.indefinida === true || form.indefinida === "true") r.duracion = "indefinida";
     RxData.register(r);
     return r;
   }

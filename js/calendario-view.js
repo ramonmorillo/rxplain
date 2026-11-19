@@ -109,8 +109,38 @@
     return '<ul class="' + cls + '">' + items.map(function (t) { return "<li>" + esc(t) + "</li>"; }).join("") + "</ul>";
   }
 
+  var HASTA_DEFECTO = "2027-12-31";
+
+  // "2027-12-31" -> "31/12/2027"
+  function fmtDMY(iso) { return iso.slice(8) + "/" + iso.slice(5, 7) + "/" + iso.slice(0, 4); }
+
+  // Recorta una agenda construida con el tope del motor a la fecha "hasta".
+  // Devuelve { schedule, recortadoHasta }: recortadoHasta (iso) solo si el tope de 60
+  // se alcanza antes de cubrir "hasta"; el calendario llega entonces hasta esa fecha.
+  function cubrirHasta(schedule, hasta) {
+    var recortado = null;
+    if (schedule.cycles.length) {
+      if (schedule.end < hasta) recortado = schedule.end;
+    } else {
+      var lastBy = {};
+      schedule.events.forEach(function (e) { if (!lastBy[e.farmaco] || e.date > lastBy[e.farmaco]) lastBy[e.farmaco] = e.date; });
+      Object.keys(lastBy).forEach(function (k) {
+        if (lastBy[k] < hasta && (recortado === null || lastBy[k] < recortado)) recortado = lastBy[k];
+      });
+    }
+    var events = schedule.events.filter(function (e) { return e.date <= hasta; });
+    var cycles = schedule.cycles.filter(function (c) { return c.start <= hasta; });
+    var end = schedule.end > hasta ? hasta : schedule.end;
+    return { schedule: { cycles: cycles, events: events, end: end, recortadoHasta: recortado }, recortadoHasta: recortado };
+  }
+
   function renderAvisos(regimen, schedule) {
     var html = "";
+    if (schedule.recortadoHasta) {
+      html += '<p class="aviso aviso-recorte" role="alert"><strong>Calendario recortado hasta ' + fmtDMY(schedule.recortadoHasta) +
+        ".</strong> El motor calcula como máximo 60 " + (schedule.cycles.length ? "ciclos" : "dosis") +
+        " y no llega a la fecha «Calendario hasta».</p>";
+    }
     if (regimen.estado !== "validado") {
       html += '<p class="aviso aviso-pendiente"><strong>Esquema pendiente de validación.</strong> ' +
         "No usar con pacientes hasta que un farmacéutico lo valide frente a la fuente.</p>";
@@ -181,13 +211,18 @@
       '<button type="button" id="cal_cambiar" class="btn btn-sec">Cambiar esquema</button></div>' +
       '<form class="cal-form" onsubmit="return false">' +
       '<label>Fecha de inicio <input type="date" id="cal_inicio"></label> ' +
-      '<label><span id="cal_ciclos_lbl">Ciclos</span> <input id="cal_ciclos" type="number" inputmode="numeric" min="1" max="60"></label>' +
+      '<label><span id="cal_ciclos_lbl">Ciclos</span> <input id="cal_ciclos" type="number" inputmode="numeric" min="1" max="60"></label> ' +
+      '<label class="cal-check"><span><input type="checkbox" id="cal_indefinida"> Pauta indefinida (se continúa hasta que su médico indique otra cosa)</span></label> ' +
+      '<label>Calendario hasta <input type="date" id="cal_hasta" value="' + HASTA_DEFECTO + '"></label>' +
       '<div id="cal_retrasos" class="cal-retrasos"></div></form>' +
       '<div id="cal_avisos" class="cal-avisos"></div>' +
       '<div id="cal_meses" class="cal-meses"></div></section>' +
       '<section class="cal-subpanel"' + panelAttrs("informe") + ">" +
       '<form class="cal-form" onsubmit="return false">' +
       '<label>Identificador del paciente (opcional, no se guarda) <input id="cal_paciente" type="text" autocomplete="off"></label> ' +
+      '<label>Hospital / centro <input id="inf_hospital" type="text" autocomplete="off" placeholder="Si se deja vacío se usa el de Infografía"></label> ' +
+      '<label>Farmacéutico/a responsable <input id="inf_farmaceutico" type="text" autocomplete="off"></label> ' +
+      '<label>Teléfono de contacto <input id="inf_telefono" type="text" inputmode="tel" autocomplete="off"></label> ' +
       '<button type="button" id="cal_imprimir" class="btn">Imprimir hoja del paciente</button></form>' +
       '<div id="informe_preview" class="informe-preview" aria-label="Vista previa del informe"></div></section>';
 
@@ -204,6 +239,8 @@
     var lblEl = root.querySelector("#cal_ciclos_lbl");
     var retEl = root.querySelector("#cal_retrasos");
     var avisosEl = root.querySelector("#cal_avisos");
+    var indefEl = root.querySelector("#cal_indefinida");
+    var hastaEl = root.querySelector("#cal_hasta");
     var mesesEl = root.querySelector("#cal_meses");
 
     function regimen() { return selEl.value ? RxData.get(selEl.value) : null; }
@@ -258,11 +295,20 @@
       return selEl.value !== prev;
     }
 
+    function paintIndef() {
+      var on = indefEl.checked;
+      hastaEl.disabled = !on;
+      cicEl.disabled = on;
+    }
+
     function resetForRegimen() {
       var r = regimen();
       state.delays = {};
       if (!r) return;
-      cicEl.value = String(r.ciclos_defecto);
+      indefEl.checked = r.duracion === "indefinida";
+      paintIndef();
+      state.nManual = String(r.ciclos_defecto);
+      cicEl.value = state.nManual;
       lblEl.textContent = r.tipo === "intervalo" ? "Dosis" : "Ciclos";
     }
 
@@ -283,7 +329,20 @@
       if (!r) return null;
       var start = validIso(iniEl.value) ? iniEl.value : null;
       if (!start) return { r: r, schedule: null };
-      return { r: r, schedule: RxEngine.buildSchedule(r, { start: start, n: cicEl.value, delays: state.delays }) };
+      if (indefEl.checked) {
+        var hasta = hastaEl.value;
+        if (!validIso(hasta)) return { r: r, schedule: null, error: "Indique una fecha válida en «Calendario hasta»." };
+        if (start > hasta) {
+          return { r: r, schedule: null, error: "La fecha de inicio es posterior a «Calendario hasta» (" + fmtDMY(hasta) + "): no hay nada que calendarizar." };
+        }
+        var full = RxEngine.buildSchedule(r, { start: start, n: 60, delays: state.delays });
+        var cov = cubrirHasta(full, hasta);
+        var cnt = cov.schedule.cycles.length ||
+          cov.schedule.events.reduce(function (m, e) { return e.cycle > m ? e.cycle : m; }, 0);
+        cicEl.value = String(cnt || 1);
+        return { r: r, schedule: cov.schedule, indefinida: true, hasta: hasta };
+      }
+      return { r: r, schedule: RxEngine.buildSchedule(r, { start: start, n: cicEl.value, delays: state.delays }), indefinida: false };
     }
 
     function paintResumen() {
@@ -298,7 +357,7 @@
       var b = build();
       if (!b) { mesesEl.innerHTML = ""; avisosEl.innerHTML = ""; paintPreview(); return; }
       if (!b.schedule) {
-        avisosEl.innerHTML = '<p class="aviso">Indique una fecha de inicio válida.</p>';
+        avisosEl.innerHTML = '<p class="aviso">' + esc(b.error || "Indique una fecha de inicio válida.") + "</p>";
         mesesEl.innerHTML = "";
         paintPreview();
         return;
@@ -318,17 +377,26 @@
     function sheetHTML(b) {
       return window.RxSheet.buildSheetHTML(b.schedule, b.r, {
         paciente: root.querySelector("#cal_paciente").value.trim(),
-        profesional: { nombre: val("pharm_name"), centro: val("center"), contacto: val("contact"), fecha: val("date") },
+        profesional: {
+          nombre: rootVal("inf_farmaceutico") || val("pharm_name"),
+          centro: rootVal("inf_hospital") || val("center"),
+          contacto: rootVal("inf_telefono") || val("contact"),
+          fecha: val("date")
+        },
+        indefinida: !!b.indefinida,
+        hasta: b.indefinida ? b.hasta : "",
         hoy: hoy()
       });
     }
+
+    function rootVal(id) { var el = root.querySelector("#" + id); return el ? el.value.trim() : ""; }
 
     function paintPreview() {
       var host = root.querySelector("#informe_preview");
       if (!host) return;
       var b = build();
       if (!window.RxSheet || !b || !b.schedule) {
-        host.innerHTML = '<p class="aviso">Indique un esquema y una fecha de inicio válida para ver el informe.</p>';
+        host.innerHTML = '<p class="aviso">' + esc(b && b.error ? b.error : "Indique un esquema y una fecha de inicio válida para ver el informe.") + "</p>";
         return;
       }
       host.innerHTML = sheetHTML(b);
@@ -344,7 +412,7 @@
         return;
       }
       if (!b.schedule) {
-        avisosEl.innerHTML = '<p class="aviso">Indique una fecha de inicio válida.</p>';
+        avisosEl.innerHTML = '<p class="aviso">' + esc(b.error || "Indique una fecha de inicio válida.") + "</p>";
         goSub("calendario");
         return;
       }
@@ -379,7 +447,8 @@
     // Datos del profesional (pestaña Infografía): refrescan la vista previa.
     document.addEventListener("input", function (e) {
       var id = e.target && e.target.id;
-      if (id === "pharm_name" || id === "center" || id === "contact" || id === "date") paintPreview();
+      if (id === "pharm_name" || id === "center" || id === "contact" || id === "date" ||
+          id === "inf_hospital" || id === "inf_farmaceutico" || id === "inf_telefono") paintPreview();
     });
     document.addEventListener("click", function (e) {
       if (e.target && e.target.closest && e.target.closest("#sub-btn-informe")) paintPreview();
@@ -398,8 +467,15 @@
     areaEl.addEventListener("change", onFilter);
     iniEl.addEventListener("change", function () { paint(false); });
     iniEl.addEventListener("input", function () { paint(false); });
-    cicEl.addEventListener("input", function () { paint(true); });
-    cicEl.addEventListener("change", function () { paint(true); });
+    cicEl.addEventListener("input", function () { state.nManual = cicEl.value; paint(true); });
+    cicEl.addEventListener("change", function () { state.nManual = cicEl.value; paint(true); });
+    indefEl.addEventListener("change", function () {
+      paintIndef();
+      if (!indefEl.checked && state.nManual !== undefined) cicEl.value = state.nManual;
+      paint(true);
+    });
+    hastaEl.addEventListener("input", function () { paint(true); });
+    hastaEl.addEventListener("change", function () { paint(true); });
     retEl.addEventListener("input", function (e) {
       var t = e.target;
       if (!t || !t.getAttribute || !t.getAttribute("data-delay")) return;
@@ -462,6 +538,7 @@
         opt("intervalo", "Por intervalo (dosis sueltas cada N días)") + "</select></label>" +
         '<label><span id="cb_n_lbl">Número de ciclos por defecto</span> <input type="text" id="cb_n" inputmode="numeric" value="6"></label>' +
         '<label id="cb_ciclo_wrap">Duración del ciclo (días) <input type="text" id="cb_ciclo" inputmode="numeric" value="28"></label></div>' +
+        '<label class="cb-indef"><span><input type="checkbox" id="cb_indefinida"> Pauta indefinida (se continúa hasta que su médico indique otra cosa)</span></label>' +
         '<div id="cb_items"></div>' +
         '<p><button type="button" class="btn btn-sec" id="cb_add">Añadir fármaco</button></p>' +
         '<p id="cb_error" class="aviso cb-error" role="alert"></p>' +
@@ -497,6 +574,7 @@
         tipo: consTipo(),
         ciclos_defecto: consEl.querySelector("#cb_n").value,
         ciclo_dias: consEl.querySelector("#cb_ciclo").value,
+        indefinida: consEl.querySelector("#cb_indefinida").checked,
         items: []
       };
       Array.prototype.forEach.call(consEl.querySelectorAll(".cb-item"), function (row) {

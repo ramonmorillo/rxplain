@@ -122,3 +122,14 @@ test("farmaco, abrev y dosis: texto no vacío en ambos tipos", () => {
     }
   }
 });
+
+test("duracion: opcional, acepta limitada/indefinida y rechaza otros valores", () => {
+  RxData._reset();
+  RxData.register(base());
+  RxData._reset();
+  RxData.register({ ...base(), duracion: "indefinida" });
+  RxData._reset();
+  RxData.register({ ...base(), duracion: "limitada" });
+  rejects({ ...base(), duracion: "para siempre" }, "duracion");
+  rejects({ ...base(), duracion: true }, "duracion");
+});
