@@ -1,0 +1,61 @@
+[hidden]{display:none!important}
+
+.tabNav{display:flex;gap:8px;max-width:1180px;margin:18px auto 0;padding:0 16px;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.tabNav [role="tab"]{appearance:none;cursor:pointer;font:inherit;font-weight:600;color:var(--muted);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 20px;box-shadow:var(--shadow-soft)}
+.tabNav [role="tab"]:hover{color:var(--primary)}
+.tabNav [role="tab"][aria-selected="true"]{color:#fff;background:var(--primary);border-color:var(--primary)}
+.tabNav [role="tab"]:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+@media print{
+  .tabNav,#tab-calendario,#hojaPaciente{display:none!important}
+  body[data-printing="calendario"] .pageShell > :not(#hojaPaciente){display:none!important}
+  body[data-printing="calendario"] #hojaPaciente{display:block!important}
+}
+
+/* Hoja del paciente (solo visible al imprimir). Blanco y negro, tipografía del sistema. */
+#hojaPaciente{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#000;background:#fff;font-size:14pt;line-height:1.35}
+#hojaPaciente h1{font-size:22pt;margin:0 0 6px}
+#hojaPaciente h2{font-size:16pt;margin:16px 0 6px;break-after:avoid}
+#hojaPaciente .aviso-pendiente{border:3px solid #000;padding:8px;font-weight:800;text-align:center;background:#fff}
+#hojaPaciente .aviso-pendiente-mes{border:3px solid #000;padding:4px 6px;margin:0 0 4px;font-weight:800;text-align:center;font-size:11pt;background:#fff}
+.hoja-nota-dias{margin:6px 0 0;font-size:13pt}
+.hoja-tabla{width:100%;border-collapse:collapse;font-size:13pt}
+.hoja-tabla th,.hoja-tabla td{border:1px solid #000;padding:4px 6px;text-align:left;vertical-align:top}
+.hoja-mes{break-inside:avoid;page-break-inside:avoid;margin-top:12px}
+.hoja-mes h3{font-size:15pt;margin:0 0 4px}
+.hoja-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:0;border-left:1px solid #000;border-top:1px solid #000}
+.hoja-cab{text-align:center;font-weight:800;border-right:1px solid #000;border-bottom:1px solid #000}
+.hoja-vacio,.hoja-dia{border-right:1px solid #000;border-bottom:1px solid #000;min-height:22mm;padding:2px 3px;font-size:9pt;overflow:hidden}
+.hoja-dia-hospital{border:4px solid #000}
+.hoja-num{display:block;font-size:12pt}
+.hoja-hosp{display:block;font-weight:900;font-size:10pt}
+.hoja-med{display:block}
+.hoja-ciclo{display:block;font-weight:800;text-decoration:underline}
+.hoja-contacto{margin-top:16px;border-top:2px solid #000;break-inside:avoid}
+.hoja-contacto p{margin:2px 0}
+
+/* Vista del calendario */
+#calendarioRoot{max-width:1180px;margin:18px auto;padding:0 16px;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.cal-form{display:flex;flex-wrap:wrap;gap:12px 18px;align-items:end;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px}
+.cal-form label{display:flex;flex-direction:column;gap:4px;font-weight:600;font-size:.9rem}
+.cal-form input,.cal-form select{font:inherit;padding:6px 8px;border:1px solid var(--border);border-radius:6px}
+.cal-retrasos{display:flex;flex-wrap:wrap;gap:8px 12px;width:100%}
+.cal-retrasos input{width:5em}
+.cal-avisos{margin:12px 0}
+.aviso{margin:8px 0;padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface)}
+.aviso-pendiente{background:#fff4d6;border-color:#d9a400}
+.aviso-conflictos{background:#fde8e8;border-color:#c0392b}
+.lista-avisos{margin:6px 0 0;padding-left:20px}
+.cal-meses{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+.mes h3{margin:0 0 6px;font-size:1rem}
+.mes-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.mes-grid .cab{text-align:center;font-size:.75rem;font-weight:700;color:var(--muted)}
+.dia{min-height:54px;border:1px solid var(--border);border-radius:4px;padding:2px 3px;background:var(--surface);font-size:.7rem;overflow:hidden}
+.dia .num{font-weight:700;margin-right:3px}
+.dia.finde{background:#f3f3f3}
+.dia.festivo{background:#fde8e8}
+.dia-hospital{border-color:var(--primary);box-shadow:inset 0 0 0 2px var(--primary)}
+.etq-hospital{display:block;font-weight:800;font-size:.62rem;color:var(--primary)}
+.ciclo-ini{background:var(--accent);color:#fff;border-radius:3px;padding:0 3px;font-weight:700}
+.pildora{display:inline-block;margin:1px 1px 0 0;padding:0 4px;border-radius:8px;background:var(--primary);color:#fff;font-size:.62rem;font-weight:600}
+.pildora.lugar-casa,.pildora.lugar-casa_inyeccion{background:var(--muted)}
