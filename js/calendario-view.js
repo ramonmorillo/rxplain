@@ -147,15 +147,14 @@
     var areas = Object.keys(groups);
     var state = { id: null, start: todayIso(), n: 1, delays: {} };
 
-    var opts = areas.map(function (a) {
-      return '<optgroup label="' + esc(a) + '">' + groups[a].map(function (r) {
-        return '<option value="' + esc(r.id) + '">' + esc(r.nombre + " · " + r.linea) + "</option>";
-      }).join("") + "</optgroup>";
-    }).join("");
-
     root.innerHTML =
       '<form class="cal-form" onsubmit="return false">' +
-      '<label>Esquema <select id="cal_esquema">' + opts + "</select></label> " +
+      '<div class="cal-selector">' +
+      '<label>Buscar esquema <input type="search" id="cal_buscar" autocomplete="off" placeholder="Nombre, fármaco, área…"></label> ' +
+      '<label>Área <select id="cal_area"><option value="">Todas las áreas</option>' +
+      areas.map(function (a) { return '<option value="' + esc(a) + '">' + esc(a) + "</option>"; }).join("") +
+      "</select></label> " +
+      '<label>Esquema <select id="cal_esquema"></select></label></div>' +
       '<label>Fecha de inicio <input type="date" id="cal_inicio"></label> ' +
       '<label><span id="cal_ciclos_lbl">Ciclos</span> <input id="cal_ciclos" type="number" inputmode="numeric" min="1" max="60"></label>' +
       '<label>Identificador del paciente (opcional, no se guarda) <input id="cal_paciente" type="text" autocomplete="off"></label> ' +
@@ -165,6 +164,8 @@
       '<div id="cal_meses" class="cal-meses"></div>';
 
     var selEl = root.querySelector("#cal_esquema");
+    var buscarEl = root.querySelector("#cal_buscar");
+    var areaEl = root.querySelector("#cal_area");
     var iniEl = root.querySelector("#cal_inicio");
     var cicEl = root.querySelector("#cal_ciclos");
     var lblEl = root.querySelector("#cal_ciclos_lbl");
@@ -172,7 +173,57 @@
     var avisosEl = root.querySelector("#cal_avisos");
     var mesesEl = root.querySelector("#cal_meses");
 
-    function regimen() { return RxData.get(selEl.value); }
+    function regimen() { return selEl.value ? RxData.get(selEl.value) : null; }
+
+    // Minúsculas y sin diacríticos, para buscar "hematologia" y encontrar "Hematología".
+    function norm(t) {
+      return String(t == null ? "" : t).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    }
+
+    function haystack(r) {
+      var items = (r.items || []).slice();
+      (r.fases || []).forEach(function (f) { items = items.concat(f.items || []); });
+      var drugs = items.map(function (it) { return (it.farmaco || "") + " " + (it.abrev || ""); });
+      return norm([r.nombre, r.linea, r.area].concat(drugs).join(" "));
+    }
+
+    function matches() {
+      var q = norm(buscarEl.value.trim());
+      var area = areaEl.value;
+      var out = {};
+      areas.forEach(function (a) {
+        if (area && a !== area) return;
+        var rs = groups[a].filter(function (r) { return !q || haystack(r).indexOf(q) !== -1; });
+        if (rs.length) out[a] = rs;
+      });
+      return out;
+    }
+
+    // Reconstruye las <option> de #cal_esquema. Devuelve true si cambió el esquema seleccionado.
+    function refilter() {
+      var prev = selEl.value;
+      var found = matches();
+      var ids = [];
+      selEl.innerHTML = Object.keys(found).map(function (a) {
+        return '<optgroup label="' + esc(a) + '">' + found[a].map(function (r) {
+          ids.push(r.id);
+          var est = r.estado === "validado" ? "✔ validado" : "⚠ pendiente";
+          return '<option value="' + esc(r.id) + '">' + esc(r.nombre + " · " + r.linea + " · " + est) + "</option>";
+        }).join("") + "</optgroup>";
+      }).join("");
+      if (ids.length) selEl.value = ids.indexOf(prev) !== -1 ? prev : ids[0];
+      var msg = root.querySelector("#cal_sin_resultados");
+      if (!ids.length && !msg) {
+        msg = document.createElement("p");
+        msg.id = "cal_sin_resultados";
+        msg.setAttribute("role", "status");
+        msg.textContent = "Sin esquemas que coincidan.";
+        selEl.parentNode.parentNode.appendChild(msg);
+      } else if (ids.length && msg) {
+        msg.parentNode.removeChild(msg);
+      }
+      return selEl.value !== prev;
+    }
 
     function resetForRegimen() {
       var r = regimen();
@@ -255,6 +306,12 @@
     root.querySelector("#cal_imprimir").addEventListener("click", imprimir);
 
     selEl.addEventListener("change", function () { resetForRegimen(); paint(true); });
+    function onFilter() {
+      if (refilter()) resetForRegimen();
+      paint(true);
+    }
+    buscarEl.addEventListener("input", onFilter);
+    areaEl.addEventListener("change", onFilter);
     iniEl.addEventListener("change", function () { paint(false); });
     iniEl.addEventListener("input", function () { paint(false); });
     cicEl.addEventListener("input", function () { paint(true); });
@@ -267,6 +324,7 @@
     });
 
     iniEl.value = state.start;
+    refilter();
     if (selEl.options.length) { selEl.selectedIndex = 0; resetForRegimen(); }
     paint(true);
   }

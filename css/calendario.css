@@ -59,3 +59,8 @@
 .ciclo-ini{background:var(--accent);color:#fff;border-radius:3px;padding:0 3px;font-weight:700}
 .pildora{display:inline-block;margin:1px 1px 0 0;padding:0 4px;border-radius:8px;background:var(--primary);color:#fff;font-size:.62rem;font-weight:600}
 .pildora.lugar-casa,.pildora.lugar-casa_inyeccion{background:var(--muted)}
+
+/* Selector con buscador y filtro por área */
+.cal-selector{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:flex-end}
+.cal-selector input[type="search"],.cal-selector select{max-width:100%}
+#cal_sin_resultados{flex-basis:100%;margin:0;font-weight:600;color:var(--muted)}
