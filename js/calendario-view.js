@@ -344,9 +344,10 @@
         '<label>Abreviatura (opcional) <input type="text" data-f="abrev" maxlength="8" autocomplete="off"></label>' +
         '<label>Dosis (texto libre) <input type="text" data-f="dosis" autocomplete="off" placeholder="p. ej. 40 mg"></label>' +
         '<label>Lugar <select data-f="lugar">' + lug.map(function (l) { return opt(l[0], l[1]); }).join("") + "</select></label>" +
-        '<label class="cb-ciclos">Días del ciclo <input type="text" data-f="dias" autocomplete="off" placeholder="1-21 o 1,8,15"></label>' +
-        '<label class="cb-intervalo">Dosis iniciales: días desde el inicio <input type="text" data-f="desplazamientos_dias" autocomplete="off" placeholder="0,14,28"></label>' +
-        '<label class="cb-intervalo">Primer mantenimiento (día) <input type="text" data-f="primer_mantenimiento_dia" inputmode="numeric" placeholder="56"></label>' +
+        '<label>Veces al día (1–6) <input type="text" data-f="veces_al_dia" inputmode="numeric" value="1"></label>' +
+        '<label class="cb-ciclos">Días del ciclo (1 = primer día del ciclo) <input type="text" data-f="dias" autocomplete="off" placeholder="1-21 o 1,8,15"></label>' +
+        '<label class="cb-intervalo">Dosis iniciales: días desde el inicio (0 = día de inicio) <input type="text" data-f="desplazamientos_dias" autocomplete="off" placeholder="0,14,28"></label>' +
+        '<label class="cb-intervalo">Primer mantenimiento: días desde el inicio (0 = día de inicio) <input type="text" data-f="primer_mantenimiento_dia" inputmode="numeric" placeholder="56"></label>' +
         '<label class="cb-intervalo">Repetir cada (días) <input type="text" data-f="cada_dias" inputmode="numeric" placeholder="56"></label>' +
         '<button type="button" class="btn btn-sec" data-quitar>Quitar fármaco</button></div>';
     }

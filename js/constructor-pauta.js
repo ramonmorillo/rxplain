@@ -78,7 +78,14 @@
     if (LUGARES.indexOf(it.lugar) === -1) {
       fail("Elija el lugar de administración de " + farmaco + " (hospital, casa o casa con inyección). Lugar recibido: " + txt(it.lugar) + ".");
     }
-    var out = { farmaco: farmaco, abrev: abrev, dosis: dosis, lugar: it.lugar };
+    var veces = 1;
+    if (it.veces_al_dia !== undefined && it.veces_al_dia !== null && txt(it.veces_al_dia) !== "") {
+      veces = toInt(it.veces_al_dia);
+      if (veces === null || veces < 1 || veces > 6) {
+        fail("Las veces al día de " + farmaco + " deben ser un entero entre 1 y 6.");
+      }
+    }
+    var out = { farmaco: farmaco, abrev: abrev, dosis: dosis, lugar: it.lugar, veces_al_dia: veces };
     if (tipo === "ciclos") {
       checkDias(it.dias, cicloDias, farmaco);
       out.dias = it.dias.slice();
@@ -88,8 +95,17 @@
     if (!Array.isArray(desp) || !desp.every(function (d) { return typeof d === "number" && isFinite(d) && Math.floor(d) === d && d >= 0; })) {
       fail("Los desplazamientos de " + farmaco + " deben ser números enteros de 0 o más (días desde el inicio).");
     }
+    desp.forEach(function (d, i) {
+      if (desp.indexOf(d) !== i) fail("El día " + d + " de las dosis iniciales de " + farmaco + " está repetido.");
+      if (i > 0 && d < desp[i - 1]) {
+        fail("Las dosis iniciales de " + farmaco + " deben ir en orden creciente (hay un " + d + " después de un " + desp[i - 1] + ").");
+      }
+    });
     var pm = toInt(it.primer_mantenimiento_dia);
     if (pm === null || pm < 0) fail("El día del primer mantenimiento de " + farmaco + " debe ser un entero de 0 o más.");
+    if (desp.length && pm <= desp[desp.length - 1]) {
+      fail("El primer mantenimiento (día " + pm + ") debe ser posterior a la última dosis inicial (día " + desp[desp.length - 1] + ") de " + farmaco + ".");
+    }
     var cada = toInt(it.cada_dias);
     if (cada === null || cada < 1) fail("El campo \"cada (días)\" de " + farmaco + " debe ser un entero de 1 o más.");
     out.desplazamientos_dias = desp.slice();

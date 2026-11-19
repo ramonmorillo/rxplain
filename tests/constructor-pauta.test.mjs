@@ -225,3 +225,52 @@ test("imprimir sin esquema seleccionado pide seleccionar un esquema", async () =
   assert.match(d.getElementById("cal_avisos").textContent, /Seleccione un esquema\./);
   dom.window.close();
 });
+
+// ---------- ronda de correcciones 1 ----------
+test("intervalo: dosis iniciales duplicadas, decrecientes y mantenimiento no posterior", () => {
+  reset();
+  const f = (o) => formIntervalo({ items: [Object.assign({}, formIntervalo().items[0], o)] });
+  throwsMsg(() => RxBuilder.buildRegimen(f({ desplazamientos_dias: [0, 0, 14] })), /Biológico.*repetid/i);
+  throwsMsg(() => RxBuilder.buildRegimen(f({ desplazamientos_dias: [0, 28, 14] })), /Biológico.*orden creciente/i);
+  throwsMsg(() => RxBuilder.buildRegimen(f({ primer_mantenimiento_dia: 28 })), /primer mantenimiento \(día 28\) debe ser posterior a la última dosis inicial \(día 28\)/i);
+  throwsMsg(() => RxBuilder.buildRegimen(f({ primer_mantenimiento_dia: 10 })), /posterior/i);
+  assert.equal(RxData.list().length, 0);
+  assert.ok(RxBuilder.buildRegimen(f({ desplazamientos_dias: [], primer_mantenimiento_dia: 0 })));
+});
+
+test("veces_al_dia: opcional, entero 1-6, llega al evento", () => {
+  reset();
+  const f = (v) => formCiclos({ items: [item({ veces_al_dia: v })] });
+  [0, 7, 1.5, "x", -1].forEach((v) => throwsMsg(() => RxBuilder.buildRegimen(f(v)), /veces al día de Lenalidomida/i));
+  const r = RxBuilder.buildRegimen(f("2"));
+  assert.equal(r.fases[0].items[0].veces_al_dia, 2);
+  const s = RxEngine.buildSchedule(r, { start: "2026-11-02", n: 1 });
+  assert.equal(s.events[0].veces, 2);
+  assert.equal(RxBuilder.buildRegimen(f("")).fases[0].items[0].veces_al_dia, 1);
+  assert.equal(RxBuilder.buildRegimen(formCiclos({ items: [item()] })).fases[0].items[0].veces_al_dia, 1);
+  const ri = RxBuilder.buildRegimen(formIntervalo({ items: [Object.assign({}, formIntervalo().items[0], { veces_al_dia: 3 })] }));
+  assert.equal(ri.items[0].veces_al_dia, 3);
+});
+
+test("vista: la hoja imprime '2 veces al día' y las etiquetas aclaran el día 0/1", async () => {
+  const dom = await loadPage({ beforeParse(w) { w.print = () => {}; } });
+  const d = dom.window.document;
+  click(dom, d.getElementById("cal_nueva"));
+  const txt = d.getElementById("cal_constructor").textContent;
+  assert.match(txt, /Días del ciclo \(1 = primer día del ciclo\)/);
+  assert.match(txt, /Dosis iniciales: días desde el inicio \(0 = día de inicio\)/);
+  assert.match(txt, /Primer mantenimiento: días desde el inicio \(0 = día de inicio\)/);
+  click(dom, d.getElementById("cal_ej_oral"));
+  setValue(dom, d.getElementById("cb_nombre"), "Dos al día");
+  setValue(dom, d.querySelector("#cb_items [data-f=veces_al_dia]"), "2");
+  click(dom, d.getElementById("cb_crear"));
+  click(dom, d.getElementById("cal_imprimir"));
+  assert.match(d.getElementById("hojaPaciente").textContent, /2 veces al día/);
+  click(dom, d.getElementById("cal_nueva"));
+  click(dom, d.getElementById("cal_ej_oral"));
+  setValue(dom, d.getElementById("cb_nombre"), "Mal");
+  setValue(dom, d.querySelector("#cb_items [data-f=veces_al_dia]"), "9");
+  click(dom, d.getElementById("cb_crear"));
+  assert.match(d.querySelector("#cal_constructor p[role=alert]").textContent, /veces al día/);
+  dom.window.close();
+});
