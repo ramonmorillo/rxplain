@@ -148,7 +148,22 @@
     var canBuild = !!window.RxBuilder;
     var state = { id: null, start: todayIso(), n: 1, delays: {} };
 
+    var SUBS = [["farmacos", "Fármacos"], ["esquemas", "Esquemas"], ["calendario", "Calendario"], ["informe", "Informe del paciente"]];
+    var SUB_DEFAULT = "calendario";
+    function panelAttrs(n) {
+      return ' role="tabpanel" id="sub-' + n + '" aria-labelledby="sub-btn-' + n + '"' + (n === SUB_DEFAULT ? "" : " hidden");
+    }
+
     root.innerHTML =
+      '<nav class="cal-subtabs" id="subtabs" role="tablist" aria-label="Secciones del calendario">' +
+      SUBS.map(function (s) {
+        var on = s[0] === SUB_DEFAULT;
+        return '<button type="button" role="tab" id="sub-btn-' + s[0] + '" aria-controls="sub-' + s[0] +
+          '" aria-selected="' + on + '" tabindex="' + (on ? 0 : -1) + '">' + s[1] + "</button>";
+      }).join("") + "</nav>" +
+      '<section class="cal-subpanel"' + panelAttrs("farmacos") + ">" +
+      '<div id="farmacos_root"><p>Próximamente</p></div></section>' +
+      '<section class="cal-subpanel"' + panelAttrs("esquemas") + ">" +
       '<form class="cal-form" onsubmit="return false">' +
       '<div class="cal-selector">' +
       '<label>Buscar esquema <input type="search" id="cal_buscar" autocomplete="off" placeholder="Nombre, fármaco, área…"></label> ' +
@@ -156,15 +171,24 @@
       areas.map(function (a) { return '<option value="' + esc(a) + '">' + esc(a) + "</option>"; }).join("") +
       "</select></label> " +
       '<label>Esquema <select id="cal_esquema"></select></label></div>' +
+      (canBuild ? '<button type="button" id="cal_nueva" class="btn btn-sec" aria-expanded="false" aria-controls="cal_constructor">Crear pauta propia</button>' : "") +
+      "</form>" +
+      '<section id="cal_constructor" class="cal-constructor" hidden aria-label="Crear pauta propia"></section></section>' +
+      '<section class="cal-subpanel"' + panelAttrs("calendario") + ">" +
+      '<div id="cal_resumen" class="cal-resumen"><span id="cal_resumen_txt"></span> ' +
+      '<button type="button" id="cal_cambiar" class="btn btn-sec">Cambiar esquema</button></div>' +
+      '<form class="cal-form" onsubmit="return false">' +
       '<label>Fecha de inicio <input type="date" id="cal_inicio"></label> ' +
       '<label><span id="cal_ciclos_lbl">Ciclos</span> <input id="cal_ciclos" type="number" inputmode="numeric" min="1" max="60"></label>' +
-      '<label>Identificador del paciente (opcional, no se guarda) <input id="cal_paciente" type="text" autocomplete="off"></label> ' +
-      '<button type="button" id="cal_imprimir" class="btn">Imprimir hoja del paciente</button> ' +
-      (canBuild ? '<button type="button" id="cal_nueva" class="btn btn-sec" aria-expanded="false" aria-controls="cal_constructor">Crear pauta propia</button>' : "") +
       '<div id="cal_retrasos" class="cal-retrasos"></div></form>' +
-      '<section id="cal_constructor" class="cal-constructor" hidden aria-label="Crear pauta propia"></section>' +
       '<div id="cal_avisos" class="cal-avisos"></div>' +
-      '<div id="cal_meses" class="cal-meses"></div>';
+      '<div id="cal_meses" class="cal-meses"></div></section>' +
+      '<section class="cal-subpanel"' + panelAttrs("informe") + ">" +
+      '<form class="cal-form" onsubmit="return false">' +
+      '<label>Identificador del paciente (opcional, no se guarda) <input id="cal_paciente" type="text" autocomplete="off"></label> ' +
+      '<button type="button" id="cal_imprimir" class="btn">Imprimir hoja del paciente</button></form></section>';
+
+    function goSub(name) { if (window.RxSubtabs) window.RxSubtabs.show(name); }
 
     var selEl = root.querySelector("#cal_esquema");
     var buscarEl = root.querySelector("#cal_buscar");
@@ -256,7 +280,15 @@
       return { r: r, schedule: RxEngine.buildSchedule(r, { start: start, n: cicEl.value, delays: state.delays }) };
     }
 
+    function paintResumen() {
+      var r = regimen();
+      root.querySelector("#cal_resumen_txt").textContent = r
+        ? r.nombre + " · " + r.linea + " · " + (r.estado === "validado" ? "validado" : "pendiente de validación")
+        : "Ningún esquema seleccionado.";
+    }
+
     function paint(rebuildDelayInputs) {
+      paintResumen();
       var b = build();
       if (!b) { mesesEl.innerHTML = ""; avisosEl.innerHTML = ""; return; }
       if (!b.schedule) {
@@ -275,10 +307,12 @@
       var b = build();
       if (!b) {
         avisosEl.innerHTML = '<p class="aviso">Seleccione un esquema.</p>';
+        goSub("calendario");
         return;
       }
       if (!b.schedule) {
         avisosEl.innerHTML = '<p class="aviso">Indique una fecha de inicio válida.</p>';
+        goSub("calendario");
         return;
       }
       limpiarHoja();
@@ -311,6 +345,7 @@
       if (t) limpiarHoja();
     }, true);
     root.querySelector("#cal_imprimir").addEventListener("click", imprimir);
+    root.querySelector("#cal_cambiar").addEventListener("click", function () { goSub("esquemas"); });
 
     selEl.addEventListener("change", function () { resetForRegimen(); paint(true); });
     function onFilter() {
@@ -454,6 +489,7 @@
       resetForRegimen();
       paint(true);
       cerrarConstructor();
+      goSub("calendario");
       var host = root.querySelector("#cal_avisos");
       if (host && host.scrollIntoView) { try { host.scrollIntoView(); } catch (e) { /* jsdom */ } }
     }
