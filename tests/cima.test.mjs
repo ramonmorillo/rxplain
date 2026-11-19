@@ -30,8 +30,10 @@ const LISTA = {
 test("buscar: éxito mapea campos, usa el endpoint y codifica el nombre", async () => {
   const { cima, calls } = mk(() => resp(LISTA, { json: true }));
   const r = await cima.buscar("farma x&y");
-  assert.equal(calls.length, 1);
-  assert.equal(calls[0], "https://cima.aemps.es/cima/rest/medicamentos?nombre=farma%20x%26y&pagina=1");
+  assert.equal(calls.length, 2);
+  assert.ok(calls.includes("https://cima.aemps.es/cima/rest/medicamentos?nombre=farma%20x%26y"));
+  assert.ok(calls.includes("https://cima.aemps.es/cima/rest/medicamentos?practiv1=farma%20x%26y"));
+  assert.ok(calls.every((u) => !/pagina/.test(u)));
   assert.equal(r.length, 2);
   assert.equal(r[0].nregistro, "12345");
   assert.equal(r[0].pactivos, "FARMAXINA");
@@ -113,7 +115,7 @@ test("UI: no hay llamadas a CIMA al cargar; buscar solo con botón/Enter", async
   assert.equal(calls.length, 0, "escribir no dispara red");
   d.getElementById("far_buscar_btn").click();
   await tick();
-  assert.equal(calls.length, 1);
+  assert.equal(calls.length, 2);
   const items = d.querySelectorAll("#far_resultados li");
   assert.equal(items.length, 2);
   assert.match(items[0].textContent, /FARMAX/);
@@ -133,7 +135,7 @@ test("UI: Enter en el campo envía la búsqueda; nombre vacío no llama", async 
   inp.value = "farm";
   d.getElementById("far_form").dispatchEvent(new dom.window.Event("submit", { bubbles: true, cancelable: true }));
   await tick();
-  assert.equal(calls.length, 1);
+  assert.equal(calls.length, 2);
   dom.window.close();
 });
 
@@ -152,7 +154,7 @@ test("UI: nombre con <script> se muestra como texto, sin crear elementos", async
 
 test("UI: vacío, HTTP 500 y red caída muestran aviso sin lanzar", async () => {
   for (const [handler, re] of [
-    [() => resp({ resultados: [] }, { json: true }), /sin resultados|no se encontr/i],
+    [() => resp({ resultados: [] }, { json: true }), /no devolvió medicamentos/i],
     [() => resp("x", { status: 500 }), /500/],
     [() => { throw new TypeError("Failed to fetch"); }, /conectar|red/i],
   ]) {
@@ -221,4 +223,102 @@ test("htmlToText: saltos de línea crudos no parten frases; poblaciones avisadas
   assert.equal(r.propuestas.length, 2);
   assert.deepEqual(r.propuestas.map((p) => p.veces_al_dia), [2, 1]);
   for (const p of r.propuestas) assert.ok(p.avisos.some((a) => a.startsWith("La ficha distingue poblaciones")));
+});
+
+// ---- Hotfix: búsqueda robusta (nombre + practiv1) ----
+const byVia = (nombreResp, practivResp) => (url) => (url.includes("practiv1=") ? practivResp() : nombreResp());
+const OK = (b) => () => resp(b, { json: true });
+const VACIO = OK({ resultados: [] });
+const FAIL500 = () => resp("boom", { status: 500 });
+
+test("buscarDetalle: solo nombre devuelve datos", async () => {
+  const { cima } = mk(byVia(OK(LISTA), VACIO));
+  const r = await cima.buscarDetalle("farm");
+  assert.equal(r.items.length, 2);
+  assert.match(r.diagnostico, /nombre comercial: HTTP 200, 2 elemento/);
+  assert.match(r.diagnostico, /principio activo: HTTP 200, 0 elemento/);
+});
+
+test("buscarDetalle: solo practiv1 devuelve datos (formas array e items)", async () => {
+  let r = await mk(byVia(VACIO, OK(LISTA.resultados))).cima.buscarDetalle("adali");
+  assert.equal(r.items.length, 2);
+  r = await mk(byVia(OK({}), OK({ items: LISTA.resultados }))).cima.buscarDetalle("adali");
+  assert.equal(r.items.length, 2);
+});
+
+test("buscarDetalle: ambos devuelven datos y se deduplica por nregistro", async () => {
+  const extra = { nregistro: "99999", nombre: "TERCERO" };
+  const { cima } = mk(byVia(OK(LISTA), OK({ resultados: [LISTA.resultados[0], extra] })));
+  const r = await cima.buscarDetalle("farm");
+  assert.deepEqual(r.items.map((m) => m.nregistro), ["12345", "67890", "99999"]);
+});
+
+test("buscarDetalle: una petición HTTP 500 y la otra OK -> resultados y diagnóstico con el fallo", async () => {
+  for (const [n, p] of [[FAIL500, OK(LISTA)], [OK(LISTA), FAIL500]]) {
+    const r = await mk(byVia(n, p)).cima.buscarDetalle("farm");
+    assert.equal(r.items.length, 2);
+    assert.match(r.diagnostico, /HTTP 500, fallo/);
+  }
+});
+
+test("buscarDetalle: ambas fallan -> Error claro con diagnóstico", async () => {
+  await assert.rejects(() => mk(() => resp("x", { status: 500 })).cima.buscarDetalle("x"),
+    (e) => /500/.test(e.message) && /nombre comercial: HTTP 500, fallo/.test(e.diagnostico));
+  await assert.rejects(() => mk(byVia(FAIL500, () => { throw new TypeError("net"); })).cima.buscarDetalle("x"), /500|conectar/);
+});
+
+test("buscarDetalle: cero resultados -> mensaje preciso y diagnóstico", async () => {
+  const r = await mk(() => resp({ resultados: [] }, { json: true })).cima.buscarDetalle("ADALI");
+  assert.equal(r.items.length, 0);
+  assert.equal(r.mensajeVacio, "CIMA no devolvió medicamentos para «ADALI» (se buscó por nombre comercial y por principio activo). Pruebe el nombre completo (p. ej. «adalimumab» o «Humira») o el principio activo.");
+  assert.match(r.diagnostico, /HTTP 200, 0 elemento/);
+});
+
+test("buscarDetalle: cuenta resultados descartados por formato", async () => {
+  const { cima } = mk(byVia(OK({ resultados: [{ nregistro: "1/x", nombre: "m" }, null, { nregistro: "5", nombre: "ok" }] }), VACIO));
+  const r = await cima.buscarDetalle("x");
+  assert.equal(r.items.length, 1);
+  assert.equal(r.descartados, 2);
+  assert.match(r.diagnostico, /2 resultados descartados por formato/);
+  const sin = await mk(byVia(OK(LISTA), VACIO)).cima.buscarDetalle("x");
+  assert.ok(!/descartados/.test(sin.diagnostico));
+});
+
+test("UI: cero resultados muestra mensaje preciso y línea de diagnóstico; todo escapado", async () => {
+  const { dom, d, calls } = await ui(() => resp({ resultados: [] }, { json: true }));
+  d.getElementById("far_buscar").value = "<b>ADALI</b>";
+  d.getElementById("far_buscar_btn").click();
+  await tick();
+  assert.equal(calls.length, 2);
+  assert.match(d.getElementById("far_estado").textContent, /CIMA no devolvió medicamentos para «<b>ADALI<\/b>»/);
+  assert.equal(d.querySelectorAll("#farmacos_root b").length, 0);
+  assert.match(d.getElementById("far_diag").textContent, /nombre comercial: HTTP 200, 0 elemento/);
+  assert.match(d.getElementById("far_diag").textContent, /principio activo: HTTP 200, 0 elemento/);
+  dom.window.close();
+});
+
+test("UI: un 500 y un OK -> lista y diagnóstico; ambos 500 -> error y diagnóstico", async () => {
+  let t = await ui(byVia(FAIL500, OK(LISTA)));
+  t.d.getElementById("far_buscar").value = "farm";
+  t.d.getElementById("far_buscar_btn").click();
+  await tick();
+  assert.equal(t.d.querySelectorAll("#far_resultados li").length, 2);
+  assert.match(t.d.getElementById("far_diag").textContent, /HTTP 500/);
+  t.dom.window.close();
+  t = await ui(FAIL500);
+  t.d.getElementById("far_buscar").value = "farm";
+  t.d.getElementById("far_buscar_btn").click();
+  await tick();
+  assert.match(t.d.getElementById("far_estado").textContent, /500/);
+  assert.match(t.d.getElementById("far_diag").textContent, /HTTP 500, fallo/);
+  t.dom.window.close();
+});
+
+test("UI: descartados por formato se muestran en el diagnóstico", async () => {
+  const { dom, d } = await ui(() => resp({ resultados: [{ nregistro: "a/b" }, { nregistro: "7", nombre: "N" }] }, { json: true }));
+  d.getElementById("far_buscar").value = "x";
+  d.getElementById("far_buscar_btn").click();
+  await tick();
+  assert.match(d.getElementById("far_diag").textContent, /2 resultados descartados por formato/);
+  dom.window.close();
 });

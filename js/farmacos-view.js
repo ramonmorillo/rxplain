@@ -35,10 +35,11 @@
     var nota = el("p", { class: "tiny far-nota" },
       "Solo se envía a CIMA/AEMPS el nombre del fármaco al pulsar Buscar; nunca datos del paciente.");
     var estado = el("p", { id: "far_estado", class: "far-estado", role: "status", "aria-live": "polite" });
+    var diag = el("p", { id: "far_diag", class: "tiny far-diag" });
     var lista = el("ul", { id: "far_resultados", class: "far-resultados" });
     var ficha = el("section", { id: "far_ficha", class: "far-ficha", hidden: "", "aria-label": "Apartado 4.2 de la ficha técnica" });
     rootEl.appendChild(form); rootEl.appendChild(nota); rootEl.appendChild(estado);
-    rootEl.appendChild(lista); rootEl.appendChild(ficha);
+    rootEl.appendChild(diag); rootEl.appendChild(lista); rootEl.appendChild(ficha);
 
     function setEstado(t) { estado.textContent = t || ""; }
 
@@ -152,16 +153,24 @@
       lista.textContent = "";
       ficha.hidden = true; ficha.textContent = "";
       selected = null;
+      diag.textContent = "";
       setEstado("Buscando en CIMA…");
       var c;
-      try { c = client().buscar(q); } catch (err) { c = Promise.reject(err); }
-      c.then(function (items) {
+      try {
+        var cl = client();
+        c = typeof cl.buscarDetalle === "function"
+          ? cl.buscarDetalle(q)
+          : cl.buscar(q).then(function (items) { return { items: items, diagnostico: "", mensajeVacio: "Sin resultados en CIMA para \u00ab" + q + "\u00bb." }; });
+      } catch (err) { c = Promise.reject(err); }
+      c.then(function (r) {
         if (my !== seq) return;
-        if (!items.length) { setEstado("Sin resultados en CIMA para «" + q + "»."); return; }
-        setEstado(items.length + " resultado(s). Elija uno para ver el apartado 4.2.");
-        pintar(items);
+        diag.textContent = r.diagnostico || "";
+        if (!r.items.length) { setEstado(r.mensajeVacio); return; }
+        setEstado(r.items.length + " resultado(s). Elija uno para ver el apartado 4.2.");
+        pintar(r.items);
       }, function (err) {
         if (my !== seq) return;
+        diag.textContent = (err && err.diagnostico) || "";
         setEstado((err && err.message) || "No se pudo consultar CIMA.");
       });
     });

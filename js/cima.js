@@ -74,32 +74,91 @@
         .catch(function () { throw new Error("La respuesta de CIMA no se pudo leer."); });
     }
 
-    function buscar(nombre) {
+    // Una petición de búsqueda: nunca rechaza; devuelve {ok, status, items, error}.
+    function pedir(url) {
+      if (typeof f !== "function") return Promise.resolve({ ok: false, status: null, items: [], error: "No hay conexión disponible para consultar CIMA." });
+      var p;
+      try { p = Promise.resolve(f(url)); } catch (e) { p = Promise.reject(e); }
+      return p.then(function (res) {
+        var status = res && res.status != null ? res.status : null;
+        if (!res || !res.ok) {
+          return { ok: false, status: status, items: [], error: "CIMA respondió con un error (HTTP " + status + ") al buscar el medicamento." };
+        }
+        return Promise.resolve().then(function () { return res.text(); }).then(function (txt) {
+          var data;
+          try { data = JSON.parse(txt); } catch (e) {
+            return { ok: false, status: status, items: [], error: "CIMA devolvió una respuesta que no se entiende." };
+          }
+          var items = Array.isArray(data) ? data : (data && (data.resultados || data.items)) || [];
+          if (!Array.isArray(items)) items = [];
+          return { ok: true, status: status, items: items, error: "" };
+        }, function () {
+          return { ok: false, status: status, items: [], error: "La respuesta de CIMA no se pudo leer." };
+        });
+      }, function () {
+        return { ok: false, status: null, items: [], error: "No se pudo conectar con CIMA para buscar el medicamento. Revise la conexión." };
+      });
+    }
+
+    function textoDiag(reqs, descartados) {
+      var t = "Diagnóstico: " + reqs.map(function (r) {
+        return r.via + ": " + (r.status != null ? "HTTP " + r.status : "sin respuesta") +
+          (r.ok ? ", " + r.items.length + " elemento(s)" : ", fallo");
+      }).join("; ") + ".";
+      if (descartados) t += " " + descartados + " resultados descartados por formato.";
+      return t;
+    }
+
+    // Busca por nombre comercial y por principio activo en paralelo y fusiona.
+    // Devuelve { items, diagnostico, mensajeVacio }; rechaza solo si fallan ambas.
+    function buscarDetalle(nombre) {
       var q = str(nombre).trim();
       if (!q) return Promise.reject(new Error("Escriba un nombre de fármaco para buscar."));
-      var url = base + "/medicamentos?nombre=" + encodeURIComponent(q) + "&pagina=1";
-      return get(url, "buscar el medicamento").then(readText).then(function (txt) {
-        var data;
-        try { data = JSON.parse(txt); } catch (e) { throw new Error("CIMA devolvió una respuesta que no se entiende."); }
-        var items = Array.isArray(data) ? data : (data && (data.resultados || data.items)) || [];
-        if (!Array.isArray(items)) items = [];
-        var out = [];
-        items.forEach(function (m) {
-          if (!m || typeof m !== "object") return;
-          var nreg = str(m.nregistro);
-          if (!NREG.test(nreg)) return;
-          var ff = m.formaFarmaceutica;
-          out.push({
-            nregistro: nreg,
-            nombre: str(m.nombre),
-            pactivos: str(m.pactivos),
-            formaFarmaceutica: str(ff && typeof ff === "object" ? ff.nombre : ff),
-            labtitular: str(m.labtitular),
-            url: fichaUrl(nreg)
+      var enc = encodeURIComponent(q);
+      return Promise.all([
+        pedir(base + "/medicamentos?nombre=" + enc),
+        pedir(base + "/medicamentos?practiv1=" + enc)
+      ]).then(function (rs) {
+        rs[0].via = "nombre comercial";
+        rs[1].via = "principio activo";
+        if (!rs[0].ok && !rs[1].ok) {
+          var msgs = [rs[0].error];
+          if (rs[1].error !== rs[0].error) msgs.push(rs[1].error);
+          var err = new Error(msgs.join(" "));
+          err.diagnostico = textoDiag(rs, 0);
+          throw err;
+        }
+        var seen = {}, out = [], dropped = 0;
+        rs.forEach(function (r) {
+          r.items.forEach(function (m) {
+            if (!m || typeof m !== "object") { dropped++; return; }
+            var nreg = str(m.nregistro);
+            if (!NREG.test(nreg)) { dropped++; return; }
+            if (seen[nreg]) return;
+            seen[nreg] = true;
+            var ff = m.formaFarmaceutica;
+            out.push({
+              nregistro: nreg,
+              nombre: str(m.nombre),
+              pactivos: str(m.pactivos),
+              formaFarmaceutica: str(ff && typeof ff === "object" ? ff.nombre : ff),
+              labtitular: str(m.labtitular),
+              url: fichaUrl(nreg)
+            });
           });
         });
-        return out;
+        return {
+          items: out,
+          diagnostico: textoDiag(rs, dropped),
+          descartados: dropped,
+          mensajeVacio: "CIMA no devolvió medicamentos para \u00ab" + q + "\u00bb (se buscó por nombre comercial y por principio activo). " +
+            "Pruebe el nombre completo (p. ej. \u00abadalimumab\u00bb o \u00abHumira\u00bb) o el principio activo."
+        };
       });
+    }
+
+    function buscar(nombre) {
+      return buscarDetalle(nombre).then(function (r) { return r.items; });
     }
 
     function apartado(nregistro, seccion) {
@@ -124,7 +183,7 @@
       });
     }
 
-    return { buscar: buscar, apartado: apartado };
+    return { buscar: buscar, buscarDetalle: buscarDetalle, apartado: apartado };
   }
 
   return { create: create, BASE: BASE, htmlToText: htmlToText, fichaUrl: fichaUrl };
