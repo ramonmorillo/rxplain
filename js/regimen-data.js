@@ -22,6 +22,10 @@
   }
 
   function checkItemLugar(it) {
+    if (!it || typeof it !== "object") fail("items", "cada item debe ser un objeto");
+    ["farmaco", "abrev", "dosis"].forEach(function (k) {
+      if (!nonEmptyStr(it[k])) fail(k, "obligatorio en cada item (texto no vacío)");
+    });
     if (LUGARES.indexOf(it.lugar) === -1) {
       fail("lugar", "debe ser uno de " + LUGARES.join(", ") + " (recibido: " + it.lugar + ")");
     }

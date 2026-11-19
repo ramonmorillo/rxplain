@@ -108,3 +108,17 @@ test("tres esquemas de mieloma: pendientes, y el motor los calcula", () => {
   assert.equal(RxData.get("mieloma-isa-kd").fases[0].items[0].dosis, "10 mg/kg");
   assert.ok(drd.supuestos.some((s) => s.includes("SC e IV")));
 });
+
+test("farmaco, abrev y dosis: texto no vacío en ambos tipos", () => {
+  for (const k of ["farmaco", "abrev", "dosis"]) {
+    for (const bad of [undefined, "", "  ", 5]) {
+      RxData._reset();
+      const c = base(); c.fases[0].items[0][k] = bad; rejects(c, k);
+      RxData._reset();
+      const i = { ...base(), tipo: "intervalo", fases: undefined,
+        items: [{ farmaco: "A", abrev: "A", dosis: "1 mg", lugar: "casa_inyeccion",
+          desplazamientos_dias: [0], primer_mantenimiento_dia: 28, cada_dias: 28, dosis_totales: 2 }] };
+      i.items[0][k] = bad; rejects(i, k);
+    }
+  }
+});

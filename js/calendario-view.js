@@ -111,7 +111,7 @@
 
   function renderAvisos(regimen, schedule) {
     var html = "";
-    if (regimen.estado === "pendiente") {
+    if (regimen.estado !== "validado") {
       html += '<p class="aviso aviso-pendiente"><strong>Esquema pendiente de validación.</strong> ' +
         "No usar con pacientes hasta que un farmacéutico lo valide frente a la fuente.</p>";
     }

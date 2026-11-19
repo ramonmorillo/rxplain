@@ -19,6 +19,7 @@
   }
   function pad(n) { return (n < 10 ? "0" : "") + n; }
   function eng() { return root.RxEngine || (typeof require === "function" ? require("./schedule-engine.js") : null); }
+  var BANNER = "ESQUEMA PENDIENTE DE VALIDACIÓN — NO ENTREGAR AL PACIENTE";
   function lugarTxt(l) { return LUGAR[l] || String(l || ""); }
 
   function fmtLong(iso) {
@@ -54,21 +55,67 @@
     return '<table class="hoja-tabla"><thead><tr><th>Día</th><th>Medicación en el hospital</th></tr></thead><tbody>' + rows + "</tbody></table>";
   }
 
-  function homeMeds(events) {
-    var seen = {}, rows = "";
-    events.forEach(function (e) {
-      if (e.lugar === "hospital") return;
-      var k = [e.farmaco, e.dosis, e.veces, e.lugar].join("|");
-      if (seen[k]) return;
-      seen[k] = true;
-      rows += "<tr><td>" + esc(e.farmaco) + "</td><td>" + esc(e.dosis) + "</td><td>" +
-        esc(e.veces) + (Number(e.veces) === 1 ? " vez al día" : " veces al día") + "</td><td>" + esc(lugarTxt(e.lugar)) + "</td></tr>";
-    });
-    if (!rows) return "<p>No hay medicación para tomar en casa.</p>";
-    return '<table class="hoja-tabla"><thead><tr><th>Medicamento</th><th>Dosis</th><th>Veces</th><th>Dónde</th></tr></thead><tbody>' + rows + "</tbody></table>";
+  // Días enteros ordenados -> texto compacto: "1–21", "1, 8, 15, 22".
+  function fmtDays(days) {
+    var out = [], i = 0;
+    while (i < days.length) {
+      var j = i;
+      while (j + 1 < days.length && days[j + 1] === days[j] + 1) j++;
+      if (j - i >= 2) out.push(days[i] + "–" + days[j]);
+      else for (var k = i; k <= j; k++) out.push(String(days[k]));
+      i = j + 1;
+    }
+    return out.join(", ");
   }
 
-  function months(schedule, g) {
+  function fmtCycles(ns) {
+    return fmtDays(ns.slice().sort(function (a, b) { return a - b; }));
+  }
+
+  function intervalText(regimen, farmaco) {
+    var it = ((regimen && regimen.items) || []).filter(function (x) { return x.farmaco === farmaco; })[0];
+    var n = it && Number(it.cada_dias);
+    return n > 0 ? "Cada " + n + " días (ver calendario)" : "Según el calendario";
+  }
+
+  function homeMeds(events, regimen) {
+    var groups = {}, order = [], rows = "";
+    var intervalo = regimen && regimen.tipo === "intervalo";
+    events.forEach(function (e) {
+      if (e.lugar === "hospital") return;
+      var gk = [e.farmaco, e.dosis, e.veces, e.lugar].join("|");
+      if (!groups[gk]) { groups[gk] = { e: e, byCycle: {}, cycleOrder: [] }; order.push(gk); }
+      var G = groups[gk], c = String(e.cycle);
+      if (!G.byCycle[c]) { G.byCycle[c] = []; G.cycleOrder.push(c); }
+      if (G.byCycle[c].indexOf(e.day) === -1) G.byCycle[c].push(e.day);
+    });
+    order.forEach(function (gk) {
+      var G = groups[gk], e = G.e, pats = {}, patOrder = [];
+      if (intervalo) {
+        pats[""] = { txt: intervalText(regimen, e.farmaco) }; patOrder.push("");
+      } else {
+        G.cycleOrder.forEach(function (c) {
+          var days = G.byCycle[c].slice().sort(function (a, b) { return a - b; });
+          var p = days.join(",");
+          if (!pats[p]) { pats[p] = { days: days, cycles: [] }; patOrder.push(p); }
+          pats[p].cycles.push(Number(c));
+        });
+      }
+      patOrder.forEach(function (p) {
+        var P = pats[p];
+        var txt = intervalo ? P.txt : fmtDays(P.days) +
+          (patOrder.length > 1 ? " (ciclos " + fmtCycles(P.cycles) + ")" : "");
+        rows += "<tr><td>" + esc(e.farmaco) + "</td><td>" + esc(e.dosis) + "</td><td>" +
+          esc(e.veces) + (Number(e.veces) === 1 ? " vez al día" : " veces al día") + "</td><td>" +
+          esc(txt) + "</td><td>" + esc(lugarTxt(e.lugar)) + "</td></tr>";
+      });
+    });
+    if (!rows) return "<p>No hay medicación para tomar en casa.</p>";
+    return '<table class="hoja-tabla"><thead><tr><th>Medicamento</th><th>Dosis</th><th>Veces</th><th>Qué días</th><th>Dónde</th></tr></thead><tbody>' +
+      rows + '</tbody></table><p class="hoja-nota-dias"><strong>Tome la medicación solo los días marcados en el calendario.</strong></p>';
+  }
+
+  function months(schedule, g, pendiente) {
     var E = eng();
     var first = null, last = schedule.end;
     g.dates.forEach(function (d) { if (first === null || d < first) first = d; if (d > last) last = d; });
@@ -81,7 +128,8 @@
     while (y < yE || (y === yE && m <= mE)) {
       var firstIso = y + "-" + pad(m) + "-01";
       var days = new Date(Date.UTC(y, m, 0)).getUTCDate();
-      out += '<section class="hoja-mes"><h3>' + MES_LARGO[m - 1] + " " + y + '</h3><div class="hoja-grid">';
+      out += '<section class="hoja-mes"><h3>' + MES_LARGO[m - 1] + " " + y + "</h3>" +
+        (pendiente ? '<p class="aviso-pendiente-mes">' + BANNER + "</p>" : "") + '<div class="hoja-grid">';
       CAB.forEach(function (c) { out += '<div class="hoja-cab">' + c + "</div>"; });
       for (var i = 0; i < E.isoDow(firstIso); i++) out += '<div class="hoja-vacio"></div>';
       for (var d = 1; d <= days; d++) {
@@ -121,8 +169,9 @@
     var first = g.dates.length ? g.dates[0] : (schedule.cycles[0] && schedule.cycles[0].start) || "";
     var nCiclos = schedule.cycles.length;
     var html = '<article class="hoja">';
-    if (regimen.estado === "pendiente") {
-      html += '<p class="aviso-pendiente">ESQUEMA PENDIENTE DE VALIDACIÓN — NO ENTREGAR AL PACIENTE</p>';
+    var pendiente = regimen.estado !== "validado"; // fail-safe: solo "validado" exacto omite el aviso
+    if (pendiente) {
+      html += '<p class="aviso-pendiente">' + BANNER + "</p>";
     }
     html += "<h1>Calendario de tratamiento</h1>";
     if (ctx.paciente) html += '<p class="hoja-paciente"><strong>Paciente:</strong> ' + esc(ctx.paciente) + "</p>";
@@ -131,8 +180,8 @@
       (first ? " · <strong>Inicio:</strong> " + esc(fmtLong(first)) : "") +
       (nCiclos ? " · <strong>Ciclos:</strong> " + nCiclos : " · <strong>Dosis:</strong> " + g.dates.length) + "</p>";
     html += "<h2>Días que tiene que venir al hospital</h2>" + hospitalTable(g);
-    html += "<h2>Medicación en casa</h2>" + homeMeds(events);
-    html += '<h2>Calendario mensual</h2><div class="hoja-meses">' + months(schedule, g) + "</div>";
+    html += "<h2>Medicación en casa</h2>" + homeMeds(events, regimen);
+    html += '<h2>Calendario mensual</h2><div class="hoja-meses">' + months(schedule, g, pendiente) + "</div>";
     html += contactBlock(ctx.profesional);
     return html + "</article>";
   }

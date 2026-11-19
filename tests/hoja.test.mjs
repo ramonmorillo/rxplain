@@ -25,6 +25,46 @@ test("pendiente: banner exacto", () => {
   assert.ok(!buildSheetHTML(sched, regimen("validado"), vacio).includes("aviso-pendiente"));
 });
 
+const BANNER = "ESQUEMA PENDIENTE DE VALIDACIÓN — NO ENTREGAR AL PACIENTE";
+const count = (h, t) => h.split(t).length - 1;
+
+test("fail-safe: solo 'validado' exacto omite el banner", () => {
+  for (const estado of [undefined, "Pendiente", "otro", "", null]) {
+    assert.ok(buildSheetHTML(sched, regimen(estado), vacio).includes(BANNER), String(estado));
+  }
+  assert.ok(!buildSheetHTML(sched, regimen("validado"), vacio).includes(BANNER));
+});
+
+test("banner repetido en cada bloque mensual si no está validado", () => {
+  const multi = { ...sched, end: "2027-01-20" };
+  const h = buildSheetHTML(multi, regimen("pendiente"), vacio);
+  const meses = count(h, 'class="hoja-mes"');
+  assert.ok(meses >= 3);
+  assert.ok(count(h, BANNER) >= meses + 1);
+  const v = buildSheetHTML(multi, regimen("validado"), vacio);
+  assert.equal(count(v, BANNER), 0);
+  assert.ok(!v.includes("aviso-pendiente"));
+});
+
+const drdSched = () => {
+  const RxData = require("../js/regimen-data.js");
+  require("../data/regimens/mieloma-drd.js");
+  const r = RxData.get("mieloma-drd");
+  return { r, s: globalThis.RxEngine.buildSchedule(r, { start: "2026-11-23", n: 6 }) };
+};
+
+test("medicación en casa: columna 'Qué días' con rangos y filas por patrón de días", () => {
+  const { r, s } = drdSched();
+  const h = buildSheetHTML(s, r, vacio);
+  const casa = h.slice(h.indexOf("Medicación en casa"), h.indexOf("Calendario mensual"));
+  assert.ok(casa.includes("Qué días"));
+  assert.ok(casa.includes("Tome la medicación solo los días marcados en el calendario."));
+  assert.ok(/<td>1–21<\/td>/.test(casa), "lenalidomida 1–21");
+  assert.ok(casa.includes("2, 9, 16, 23") && casa.includes("2, 16"));
+  const dexa = casa.split("<tr>").filter((t) => /dexametasona/i.test(t));
+  assert.ok(dexa.length >= 2, "patrones distintos -> filas distintas");
+});
+
 test("escapa HTML de usuario y de la pauta", () => {
   const h = buildSheetHTML(sched, regimen("validado"), {
     paciente: "<img src=x onerror=alert(1)>",
@@ -44,7 +84,10 @@ test("sin profesional no hay bloque de contacto; con él, solo campos rellenados
 test("hospital: HOSPITAL en texto, fármaco y lugar como texto", () => {
   const h = buildSheetHTML(sched, regimen("validado"), vacio);
   assert.ok(h.includes("HOSPITAL") && h.includes("hoja-dia-hospital"));
-  assert.ok(h.includes("Dara") && h.includes("Dexa") && h.includes("20 mg") && h.includes("casa"));
+  const casa = h.slice(h.indexOf("Medicación en casa"), h.indexOf("Calendario mensual"));
+  const hosp = h.slice(h.indexOf("Días que tiene que venir"), h.indexOf("Medicación en casa"));
+  assert.ok(casa.includes("Dexa") && casa.includes("20 mg") && !casa.includes("Dara"));
+  assert.ok(hosp.includes("Dara") && !hosp.includes("Dexa"));
 });
 
 async function fill(dom) {
@@ -150,7 +193,7 @@ test("dos clics sin afterprint: un afterprint lo limpia todo", async () => {
   dom.window.dispatchEvent(new dom.window.Event("afterprint"));
   assert.equal(d.body.dataset.printing, undefined);
   assert.equal(d.getElementById("hojaPaciente").innerHTML, "");
-  assert.ok(n <= 2);
+  assert.equal(n, 2); // un registro por clic; el navegador deduplica el mismo listener
   dom.window.close();
 });
 

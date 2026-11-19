@@ -14,8 +14,8 @@ Genera una infografía imprimible de la medicación del paciente. Incluye una co
 - Dos tipos de pauta:
   - `ciclos`: fases con duración fija en días y fármacos con los días del ciclo en que se administran (p. ej. un ciclo de 28 días).
   - `intervalo`: dosis separadas por intervalos (desplazamientos desde el inicio, primer mantenimiento y periodicidad).
-- **Avisos de conflicto**: se señalan las visitas al hospital que caen en fin de semana o festivo. Los festivos que conoce el motor son una lista fija (nacionales más el Día de Andalucía) y Jueves y Viernes Santo calculados; **no incluye otros festivos autonómicos ni locales** (conviene que el farmacéutico los revise).
-- **Hoja del paciente imprimible**: si el esquema está en estado `pendiente`, la hoja lleva el banner "ESQUEMA PENDIENTE DE VALIDACIÓN — NO ENTREGAR AL PACIENTE".
+- **Avisos de conflicto** (`js/calendario-view.js`, a partir de los festivos de `js/schedule-engine.js`): se señalan las visitas al hospital que caen en fin de semana o festivo. Los festivos que conoce el motor son una lista fija (nacionales más el Día de Andalucía) y Jueves y Viernes Santo calculados; **no incluye otros festivos autonómicos ni locales** (conviene que el farmacéutico los revise).
+- **Hoja del paciente imprimible**: si el esquema está en estado `pendiente`, la hoja lleva el banner "ESQUEMA PENDIENTE DE VALIDACIÓN — NO ENTREGAR AL PACIENTE" (en cabecera y repetido en cada mes). El banner se muestra salvo que `estado` sea exactamente `validado`. La tabla de medicación en casa indica en qué días del ciclo se toma cada fármaco.
 
 > Los tres esquemas de mieloma múltiple incluidos (`mieloma-drd`, `mieloma-vrd-swog`, `mieloma-isa-kd`) están todos en `estado: "pendiente"`: proceden de una hoja de costes del Servicio y **no han sido validados clínicamente**. No deben entregarse a pacientes hasta su revisión.
 
@@ -61,7 +61,7 @@ Pasos:
 
 ## Pruebas
 
-Requiere Node 22. `jsdom` es dependencia solo de desarrollo (no se carga en la aplicación).
+Requiere Node >= 22 (campo `engines` de `package.json`). `jsdom` es dependencia solo de desarrollo (no se carga en la aplicación).
 
 ```
 npm install
@@ -76,9 +76,9 @@ css/rxplain.css            Estilos de la infografía
 css/calendario.css         Estilos de la pestaña Calendario y de la hoja impresa
 js/infografia.js           Infografía y consulta opcional a CIMA
 js/tabs.js                 Pestañas
-js/schedule-engine.js      Motor de calendarización (fechas, festivos, avisos)
+js/schedule-engine.js      Motor de calendarización (fechas, festivos)
 js/regimen-data.js         Registro y validador de esquemas
-js/calendario-view.js      Interfaz de la pestaña Calendario
+js/calendario-view.js      Interfaz de la pestaña Calendario (incluye los avisos y la detección de conflictos)
 js/hoja-paciente.js        Hoja imprimible del paciente
 data/regimens/             Esquemas (+ _helpers.js)
 tests/                     Pruebas (node --test)
@@ -96,4 +96,4 @@ Pendiente de realizar por el farmacéutico en Chrome y en Edge (no se ha podido 
 - [ ] (a) Abrir `index.html` desde disco y desde la URL publicada (una vez confirmada).
 - [ ] (b) Generar una infografía de ejemplo ("Cargar ejemplo") e imprimir en vista previa: debe verse igual que antes de añadir la pestaña Calendario.
 - [ ] (c) En Calendario, cargar DRd con inicio en sábado y comprobar que aparece el aviso de conflicto.
-- [ ] (d) Imprimir la hoja del paciente: el banner de "pendiente" debe ser visible y legible en blanco y negro.
+- [ ] (d) Imprimir la hoja del paciente: el banner de "pendiente" debe ser visible y legible en blanco y negro **y aparecer en CADA página impresa** de una hoja de varias páginas.

@@ -1,6 +1,9 @@
 {
   "name": "rxplain",
   "private": true,
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "test": "node --test"
   },

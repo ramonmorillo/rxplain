@@ -143,3 +143,19 @@ test("un retraso sobrevive a vaciar y restaurar la fecha de inicio", async () =>
   assert.deepEqual(dom.errors, []);
   dom.window.close();
 });
+
+test("aviso en pantalla fail-safe: solo 'validado' exacto lo omite", async () => {
+  for (const [estado, esperado] of [["pendiente", true], ["Pendiente", true], ["otro", true], [undefined, true], ["validado", false]]) {
+    const dom = await loadPage();
+    const d = dom.window.document;
+    const reg = { id: "t-" + String(estado), nombre: "T", area: "Oncología", linea: "s", estado: "validado",
+      fuente: "p", fecha_revision: "2026-01-01", ciclos_defecto: 5, ...regimenIntervalo };
+    dom.window.RxData.register(reg);
+    reg.estado = estado; // simula un dato corrupto tras el registro
+    dom.window.RxCalendar.mount(d.getElementById("calendarioRoot"));
+    setValue(dom, d.getElementById("cal_esquema"), reg.id, "change");
+    setValue(dom, d.getElementById("cal_inicio"), "2026-11-23", "change");
+    assert.equal(!!d.querySelector("#cal_avisos .aviso-pendiente"), esperado, String(estado));
+    dom.window.close();
+  }
+});
