@@ -14,6 +14,7 @@
       }
       if (panel) panel.hidden = !active;
     });
+    document.dispatchEvent(new CustomEvent("rx:tab", { detail: { name: name } }));
   }
 
   function init() {

@@ -208,3 +208,181 @@ test("cambiar a Infografía tras imprimir sin afterprint limpia todo", async () 
   assert.equal(d.getElementById("hojaPaciente").innerHTML, "");
   dom.window.close();
 });
+
+// ---- Task 4: "Sus próximas administraciones" ----
+const PROX = "Sus próximas administraciones";
+const proxBlock = (h) => {
+  const i = h.indexOf(PROX);
+  assert.ok(i >= 0, "falta el bloque");
+  const j = h.indexOf("<h2>Días que tiene que venir");
+  return h.slice(i, j);
+};
+const evs = (list) => ({
+  cycles: [{ n: 1, start: list[0].date, len: 28, fase: "C1" }],
+  events: list.map((e, i) => ({ cycle: 1, day: i + 1, abrev: "", veces: 1, etiqueta: "", dosis: "1 mg", lugar: "casa", ...e })),
+  end: "2027-03-01",
+});
+
+test("próximas: orden por fecha, empate por fármaco, fecha con día de la semana", () => {
+  const s = evs([
+    { date: "2026-11-25", farmaco: "Zeta" },
+    { date: "2026-11-23", farmaco: "Beta" },
+    { date: "2026-11-23", farmaco: "Alfa" },
+  ]);
+  const b = proxBlock(buildSheetHTML(s, regimen("validado"), { ...vacio, hoy: "2026-11-01" }));
+  assert.ok(b.indexOf("Alfa") < b.indexOf("Beta") && b.indexOf("Beta") < b.indexOf("Zeta"));
+  assert.ok(/lunes 23 de nov 2026/.test(b));
+});
+
+test("próximas: límite de 8", () => {
+  const list = [];
+  for (let i = 0; i < 12; i++) list.push({ date: "2026-11-" + String(10 + i).padStart(2, "0"), farmaco: "F" + String(i).padStart(2, "0") });
+  const b = proxBlock(buildSheetHTML(evs(list), regimen("validado"), { ...vacio, hoy: "2026-11-01" }));
+  assert.equal(count(b, "<tr class=\"hoja-prox"), 8);
+  assert.ok(b.includes("F07") && !b.includes("F08"));
+});
+
+test("próximas: pauta ya empezada cuenta desde hoy (hoy incluido); no empezada, desde el inicio", () => {
+  const s = evs([
+    { date: "2026-11-23", farmaco: "Pasado" },
+    { date: "2026-11-30", farmaco: "Hoy" },
+    { date: "2026-12-07", farmaco: "Futuro" },
+  ]);
+  const a = proxBlock(buildSheetHTML(s, regimen("validado"), { ...vacio, hoy: "2026-11-30" }));
+  assert.ok(!a.includes("Pasado") && a.includes("Hoy") && a.includes("Futuro"));
+  const b = proxBlock(buildSheetHTML(s, regimen("validado"), { ...vacio, hoy: "2026-10-01" }));
+  assert.ok(b.includes("Pasado") && b.includes("Hoy") && b.includes("Futuro"));
+});
+
+test("próximas: hospital con texto HOSPITAL y borde grueso; casa como 'En casa'", () => {
+  const b = proxBlock(buildSheetHTML(sched, regimen("validado"), { ...vacio, hoy: "2026-11-01" }));
+  const filas = b.split("<tr").filter((t) => t.includes("class=\"hoja-prox"));
+  const h = filas.find((t) => t.includes("Dara")), c = filas.find((t) => t.includes("Dexa"));
+  assert.ok(h.includes("hoja-prox-hospital") && h.includes("HOSPITAL") && h.includes("16 mg/kg"));
+  assert.ok(c.includes("En casa") && !c.includes("HOSPITAL") && c.includes("20 mg"));
+});
+
+test("próximas: escapa HTML de fármaco y dosis", () => {
+  const s = evs([{ date: "2026-11-23", farmaco: "<img src=x>", dosis: "<b>1</b>" }]);
+  const h = buildSheetHTML(s, regimen("validado"), { ...vacio, hoy: "2026-11-01" });
+  assert.ok(!h.includes("<img src=x>") && !h.includes("<b>1</b>"));
+  assert.ok(proxBlock(h).includes("&lt;img src=x&gt;"));
+});
+
+test("próximas: pauta por intervalo", () => {
+  const s = { cycles: [], events: [
+    { date: "2026-11-23", cycle: 1, day: 1, farmaco: "Inyec", abrev: "", dosis: "100 mg", veces: 1, lugar: "casa_inyeccion", etiqueta: "" },
+    { date: "2026-12-21", cycle: 2, day: 29, farmaco: "Inyec", abrev: "", dosis: "100 mg", veces: 1, lugar: "casa_inyeccion", etiqueta: "" },
+  ], end: "2026-12-21" };
+  const b = proxBlock(buildSheetHTML(s, { nombre: "I", tipo: "intervalo", items: [{ farmaco: "Inyec", cada_dias: 28 }], estado: "validado" }, { ...vacio, hoy: "2026-11-01" }));
+  assert.equal(count(b, "<tr class=\"hoja-prox"), 2);
+  assert.ok(b.includes("En casa (inyección)"));
+});
+
+test("próximas: 0 administraciones -> mensaje, sin tabla", () => {
+  const h = buildSheetHTML(sched, regimen("validado"), { ...vacio, hoy: "2027-06-01" });
+  const b = proxBlock(h);
+  assert.ok(b.includes("0 administraciones") && !b.includes("hoja-prox-hospital"));
+  assert.ok(h.includes("Calendario mensual"));
+});
+
+test("próximas: banner pendiente intacto y pie de informe", () => {
+  const h = buildSheetHTML(sched, regimen("pendiente"), { ...vacio, hoy: "2026-11-01" });
+  assert.ok(h.indexOf(BANNER) < h.indexOf(PROX));
+  assert.ok(count(h, BANNER) >= 1 + count(h, 'class="hoja-mes"'));
+  assert.ok(h.includes("Este informe no sustituye las indicaciones de su farmacéutico o médico"));
+  assert.ok(!buildSheetHTML(sched, regimen("validado"), vacio).includes(BANNER));
+});
+
+test("próximas: sin ctx.hoy usa la fecha actual (no lanza)", () => {
+  assert.ok(buildSheetHTML(sched, regimen("validado"), vacio).includes(PROX));
+});
+
+test("vista previa == hoja impresa y se refresca con los cambios", async () => {
+  const dom = await loadPage();
+  const d = await fill(dom);
+  dom.window.RxCalendar.hoy = () => "2026-11-01";
+  d.getElementById("cal_paciente").value = "Pac Uno";
+  d.getElementById("cal_paciente").dispatchEvent(new dom.window.Event("input", { bubbles: true }));
+  const prev = d.getElementById("informe_preview");
+  assert.ok(prev.innerHTML.includes("Pac Uno") && prev.innerHTML.includes("Sus próximas administraciones"));
+  dom.window.print = () => {};
+  d.getElementById("cal_imprimir").click();
+  assert.equal(d.getElementById("hojaPaciente").innerHTML, prev.innerHTML);
+  dom.window.dispatchEvent(new dom.window.Event("afterprint"));
+  const ini = d.getElementById("cal_inicio"); ini.value = "2026-12-07"; ini.dispatchEvent(new dom.window.Event("change", { bubbles: true }));
+  assert.ok(prev.innerHTML.includes("7 de dic 2026"));
+  const cic = d.getElementById("cal_ciclos"); cic.value = "1"; cic.dispatchEvent(new dom.window.Event("input", { bubbles: true }));
+  assert.ok(!prev.innerHTML.includes("hoja-mes") || prev.innerHTML.split("hoja-mes").length < 8);
+  assert.equal(prev.querySelectorAll("[id]").length, 0, "sin ids duplicados");
+  assert.deepEqual(dom.errors, []);
+  dom.window.close();
+});
+
+test("vista previa: fecha vacía la vacía; CSS de impresión la oculta", async () => {
+  const dom = await loadPage();
+  const d = await fill(dom);
+  const ini = d.getElementById("cal_inicio"); ini.value = ""; ini.dispatchEvent(new dom.window.Event("change", { bubbles: true }));
+  assert.equal(d.getElementById("informe_preview").innerHTML.includes("Sus próximas"), false);
+  const fs = await import("node:fs");
+  const css = fs.readFileSync(new URL("../css/calendario.css", import.meta.url), "utf8");
+  assert.match(css, /@media print\{[^]*#informe_preview/);
+  dom.window.close();
+});
+
+// ---- Final fix wave ----
+test("I1: banner dentro del thead de la tabla de hospital y de casa si no validado", () => {
+  const multi = { ...sched, end: "2027-01-20" };
+  for (const estado of ["pendiente", undefined, "otro"]) {
+    const h = buildSheetHTML(multi, regimen(estado), vacio);
+    const tablas = h.match(/<table class="hoja-tabla">[\s\S]*?<\/table>/g) || [];
+    assert.equal(tablas.length, 2, String(estado));
+    for (const t of tablas) {
+      const thead = t.match(/<thead>[\s\S]*?<\/thead>/)[0];
+      assert.ok(thead.includes(BANNER), String(estado));
+      assert.ok(/<th colspan="\d+" class="aviso-pendiente-mes">/.test(thead));
+      assert.ok(!t.slice(t.indexOf("</thead>")).includes(BANNER));
+    }
+  }
+  const v = buildSheetHTML(multi, regimen("validado"), vacio);
+  for (const t of v.match(/<table class="hoja-tabla">[\s\S]*?<\/table>/g)) assert.ok(!t.includes(BANNER));
+});
+
+test("I1: mieloma-isa-kd 12 ciclos pendiente -> banner en thead de la tabla larga", () => {
+  const RxData = require("../js/regimen-data.js");
+  require("../data/regimens/mieloma-isa-kd.js");
+  const r = { ...RxData.get("mieloma-isa-kd"), estado: "pendiente" };
+  const s = globalThis.RxEngine.buildSchedule(r, { start: "2026-11-23", n: 12 });
+  const h = buildSheetHTML(s, r, vacio);
+  const t = h.match(/<table class="hoja-tabla"><thead>[\s\S]*?<\/table>/)[0];
+  assert.ok(t.split("<tr>").length > 40);
+  assert.ok(t.match(/<thead>[\s\S]*?<\/thead>/)[0].includes(BANNER));
+});
+
+test("M2: próximas muestra la etiqueta tras la dosis", () => {
+  const s = { cycles: [{ n: 1, start: "2026-11-23", len: 28 }], end: "2026-12-20", events: [
+    { date: "2026-11-23", cycle: 1, day: 1, farmaco: "Dexa", abrev: "", dosis: "20 mg", veces: 1, lugar: "casa", etiqueta: "premed." },
+    { date: "2026-11-24", cycle: 1, day: 2, farmaco: "Dara", abrev: "", dosis: "10 mg", veces: 1, lugar: "casa", etiqueta: "" },
+  ] };
+  const h = buildSheetHTML(s, regimen("validado"), { ...vacio, hoy: "2026-11-01" });
+  const prox = h.slice(h.indexOf("Sus próximas"), h.indexOf("Días que tiene"));
+  assert.ok(prox.includes("20 mg premed."), prox);
+  assert.ok(!prox.includes("10 mg ") || prox.includes("10 mg</td>"));
+});
+
+test("M1: vista previa se repinta al mostrar Informe y al volver a la pestaña Calendario", async () => {
+  const dom = await loadPage();
+  const d = await fill(dom);
+  const prev = d.getElementById("informe_preview");
+  d.getElementById("pharm_name").value = "Dra. Repintada";
+  dom.window.RxSubtabs.show("informe");
+  assert.ok(prev.innerHTML.includes("Dra. Repintada"));
+  d.getElementById("pharm_name").value = "Dr. Segundo";
+  d.getElementById("sub-btn-calendario").click(); d.getElementById("sub-btn-informe").click();
+  assert.ok(prev.innerHTML.includes("Dr. Segundo"));
+  d.getElementById("pharm_name").value = "Dra. Tercera";
+  dom.window.RxTabs.show("infografia"); dom.window.RxTabs.show("calendario");
+  assert.ok(prev.innerHTML.includes("Dra. Tercera"));
+  assert.deepEqual(dom.errors, []);
+  dom.window.close();
+});

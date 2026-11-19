@@ -17,6 +17,12 @@ Genera una infografía imprimible de la medicación del paciente. Incluye una co
 - **Avisos de conflicto** (`js/calendario-view.js`, a partir de los festivos de `js/schedule-engine.js`): se señalan las visitas al hospital que caen en fin de semana o festivo. Los festivos que conoce el motor son una lista fija (nacionales más el Día de Andalucía) y Jueves y Viernes Santo calculados; **no incluye otros festivos autonómicos ni locales** (conviene que el farmacéutico los revise).
 - **Hoja del paciente imprimible**: si el esquema está en estado `pendiente`, la hoja lleva el banner "ESQUEMA PENDIENTE DE VALIDACIÓN — NO ENTREGAR AL PACIENTE" (en cabecera y repetido en cada mes). El banner se muestra salvo que `estado` sea exactamente `validado`. La tabla de medicación en casa indica en qué días del ciclo se toma cada fármaco.
 
+#### Flujo de las cuatro sub-pestañas
+1. **Fármacos**: buscar el medicamento en CIMA, leer el apartado 4.2 y, si se quiere, proponer un borrador de pauta (siempre editable y *pendiente*).
+2. **Esquemas**: elegir un esquema del catálogo o crear una pauta propia (el borrador se precarga aquí).
+3. **Calendario**: fecha de inicio, ciclos/dosis y retrasos; avisos de conflicto y calendario mensual.
+4. **Informe**: identificador del paciente (opcional, no se guarda) y vista previa en pantalla (`#informe_preview`), generada con la misma función que la hoja impresa y refrescada con cada cambio. Empieza por **«Sus próximas administraciones»**: las próximas 8 desde la fecha de inicio (o desde hoy si la pauta ya empezó), con día de la semana, fármaco, dosis y lugar (hospital: texto HOSPITAL y borde grueso; casa: «En casa»); si no queda ninguna, indica «0 administraciones». Termina con el aviso «Este informe no sustituye las indicaciones de su farmacéutico o médico». La vista previa no se imprime; el botón imprime la hoja construida aparte (`#hojaPaciente`). Nada se guarda fuera de la memoria de la página.
+
 > Los tres esquemas de mieloma múltiple incluidos (`mieloma-drd`, `mieloma-vrd-swog`, `mieloma-isa-kd`) están todos en `estado: "pendiente"`: proceden de una hoja de costes del Servicio y **no han sido validados clínicamente**. No deben entregarse a pacientes hasta su revisión.
 
 ## Privacidad
@@ -24,7 +30,7 @@ Genera una infografía imprimible de la medicación del paciente. Incluye una co
 Declaración, comprobada con una búsqueda en el código (`js/`, `data/`, `index.html`, `css/`):
 
 - **No se guarda nada del paciente.** No hay uso de `localStorage`, `sessionStorage`, cookies ni IndexedDB. Al recargar la página los datos introducidos desaparecen.
-- **No hay comunicaciones de red**, salvo la consulta opcional ya existente a la API pública de CIMA/AEMPS (`https://cima.aemps.es/cima/rest`) desde la pestaña Infografía (`js/infografia.js`). La pestaña Calendario no realiza ninguna petición de red.
+- **No hay comunicaciones de red**, salvo la consulta opcional ya existente a la API pública de CIMA/AEMPS (`https://cima.aemps.es/cima/rest`) desde la pestaña Infografía (`js/infografia.js`). La sub-pestaña Fármacos del Calendario (`js/cima.js`, `js/farmacos-view.js`) consulta la misma API solo al pulsar Buscar o elegir un resultado, enviando únicamente el nombre del fármaco o su nº de registro; el resto del Calendario no realiza peticiones de red.
 - No hay analítica, CDN, fuentes externas ni scripts de terceros. Los enlaces a EMA, AEMPS, CIMA y SEFH de la infografía son enlaces que abre el usuario.
 
 Esta declaración describe el código del repositorio. Si se modifica el código, debe volver a verificarse.
@@ -88,6 +94,8 @@ css/rxplain.css            Estilos de la infografía
 css/calendario.css         Estilos de la pestaña Calendario y de la hoja impresa
 js/infografia.js           Infografía y consulta opcional a CIMA
 js/tabs.js                 Pestañas
+js/cima.js                 Cliente CIMA/AEMPS (búsqueda y apartado 4.2; `fetch` inyectable)
+js/farmacos-view.js        Sub-pestaña Fármacos
 js/schedule-engine.js      Motor de calendarización (fechas, festivos)
 js/regimen-data.js         Registro y validador de esquemas
 js/calendario-view.js      Interfaz de la pestaña Calendario (incluye los avisos y la detección de conflictos)
@@ -96,6 +104,26 @@ data/regimens/             Esquemas (+ helpers.js)
 tests/                     Pruebas (node --test)
 docs/superpowers/          Especificación y plan del desarrollo
 ```
+
+## Fármacos y CIMA
+
+La sub-pestaña **Fármacos** busca un medicamento en CIMA/AEMPS (`/medicamentos?nombre=…`), muestra nombre, principio activo, forma y enlace a CIMA, y al elegir uno carga el apartado 4.2 de la ficha técnica (`/docSegmentado/contenido/1?nregistro=…&seccion=4.2`). El «fármaco normalizado» (principio activo + nº de registro) se guarda solo en memoria.
+
+**Limitaciones:** no ha podido probarse contra CIMA real (el entorno de desarrollo no tiene acceso); los tests usan respuestas simuladas. El formato del endpoint `docSegmentado` no está verificado, por lo que el código acepta JSON o HTML/texto y, si falla o viene vacío, muestra un aviso y el enlace a la ficha técnica en CIMA. El texto del 4.2 es solo orientativo: la ficha oficial manda. La llamada solo ocurre al pulsar Buscar/Enter o al elegir un resultado, y nunca incluye datos del paciente.
+
+### Borrador de pauta desde la ficha técnica
+
+Con el 4.2 cargado, **Proponer pauta** (`js/posologia-ft.js`) lee solo la *frecuencia* y muestra cada propuesta junto a la frase de la que sale; **Usar en el constructor** la precarga en el formulario de Esquemas. Es un borrador automático: no sustituye la validación farmacéutica, y la pauta que se cree queda siempre como *pendiente*.
+
+**Límites:**
+- Reconoce solo patrones simples en español: «una vez / dos veces… al día», «cada N horas» (si 24/N es entero de 1 a 6), «días 1 a 21 de ciclos de 28 días», «21 de cada 28 días», «cada N semanas/días» y «semanas 0, 2 y 4 y después cada 8 semanas». Admite coma decimal, pero solo si el resultado son días enteros («cada 1,5 semanas» no se propone).
+- No extrae ni calcula **dosis** (queda vacía), ni área ni lugar de administración (quedan sin elegir); el farmacéutico debe completarlos para poder crear la pauta.
+- Criterio conservador: si una frase contiene un calificador que no se interpreta (máximo, «hasta», «no más de», «si es necesario», «dosis de carga», descansos, rangos de días o ciclos no reconocidos, intervalos en rango «cada 2-4 semanas», alternativas con «o»), **no se propone nada** y se muestra un aviso con el calificador. Si falta incluir una duración («durante 12 semanas»), la propuesta se muestra con un aviso propio.
+- Cada frase se analiza por separado, salvo una lista de dosis iniciales («Semanas 0, 2 y 4.») seguida de una frase que empiece por «Después/Posteriormente/Luego… cada N»: se unen en una sola propuesta. Si no se pueden unir, no se propone nada y se avisa (la inducción nunca se pierde en silencio). Los días de la ficha («Días 1, 8 y 15») se convierten a desplazamientos desde el día de inicio (día 1 = 0).
+- «Veces al día» sin dato en la ficha queda en blanco con una marca «sin dato» (en blanco, el constructor usa 1). No se admite «0,2 y 4» sin espacios (es ambiguo con la coma decimal).
+- En «semanas 0, 2 y 4 y después cada 8 semanas» el primer mantenimiento se sitúa en el día 56 (intervalo contado desde el día 0); la ficha puede querer contarlo desde la última dosis inicial. Si el mantenimiento no cae después de la última dosis inicial se deja vacío y se avisa.
+- Lo que no se entiende (rangos incoherentes, horas que no dividen 24, ajustes por peso, insuficiencia renal, etc.) no se propone: se muestra un aviso. El texto de la ficha es complejo; revise siempre el original.
+- Los tests usan frases sintéticas inventadas, no citas de fichas reales, y no se ha contrastado con fichas técnicas reales.
 
 ## Publicación
 

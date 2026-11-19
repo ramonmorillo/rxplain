@@ -7,9 +7,11 @@
 .tabNav [role="tab"]:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 
 @media print{
-  .tabNav,#tab-calendario,#hojaPaciente{display:none!important}
+  .tabNav,#tab-calendario,#informe_preview,#hojaPaciente{display:none!important}
   body[data-printing="calendario"] .pageShell > :not(#hojaPaciente){display:none!important}
   body[data-printing="calendario"] #hojaPaciente{display:block!important}
+  .hoja-proximas{break-inside:avoid}
+  .hoja-tabla tr{break-inside:avoid}
 }
 
 /* Hoja del paciente (solo visible al imprimir). Blanco y negro, tipografía del sistema. */
@@ -76,3 +78,48 @@
 .cb-error:empty{display:none}
 .cb-error{background:#fde8e8;border-color:#c0392b}
 .btn-sec{background:var(--surface);color:var(--primary);border:1px solid var(--primary)}
+
+/* Sub-pestañas del Calendario */
+.cal-subtabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.cal-subtabs [role="tab"]{appearance:none;cursor:pointer;font:inherit;font-weight:600;color:var(--muted);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 16px}
+.cal-subtabs [role="tab"]:hover{color:var(--primary)}
+.cal-subtabs [role="tab"][aria-selected="true"]{color:#fff;background:var(--primary);border-color:var(--primary)}
+.cal-subtabs [role="tab"]:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.cal-resumen{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0 0 12px;font-weight:600}
+
+/* Sub-pestaña Fármacos (CIMA) */
+.far-nota{margin:6px 0}
+.far-estado{min-height:1.2em;font-weight:600;color:var(--muted)}
+.far-resultados{list-style:none;margin:8px 0;padding:0}
+.far-resultados li{padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;background:var(--surface)}
+.far-meta{color:var(--muted)}
+.far-ficha{margin-top:12px;padding:12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface)}
+.far-ficha h3{margin:0 0 4px}
+.far-texto{white-space:pre-wrap;word-break:break-word;font:inherit;max-height:340px;overflow:auto;padding:8px;border:1px solid var(--border);border-radius:6px;background:#fff}
+.far-texto:empty{display:none}
+
+/* Informe: bloque de próximas administraciones y vista previa en pantalla */
+.hoja-prox-hospital td{border:4px solid #000;font-weight:700}
+.hoja-tabla-prox td,.hoja-tabla-prox th{font-size:14pt}
+.hoja-pie{margin-top:14px;padding-top:6px;border-top:1px solid #000;font-size:12pt}
+.informe-preview{margin-top:14px;padding:16px;background:#fff;color:#000;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;line-height:1.35}
+.informe-preview h1{font-size:1.5rem;margin:0 0 6px}
+.informe-preview h2{font-size:1.15rem;margin:14px 0 6px}
+.informe-preview .aviso-pendiente{border:3px solid #000;padding:8px;font-weight:800;text-align:center;background:#fff}
+.informe-preview .aviso-pendiente-mes{border:3px solid #000;padding:4px 6px;margin:0 0 4px;font-weight:800;text-align:center;font-size:.8rem;background:#fff}
+.informe-preview .hoja-tabla{width:100%;border-collapse:collapse}
+.informe-preview .hoja-tabla th,.informe-preview .hoja-tabla td{border:1px solid #000;padding:4px 6px;text-align:left;vertical-align:top}
+.informe-preview .hoja-mes{margin-top:12px}
+.informe-preview .hoja-grid{display:grid;grid-template-columns:repeat(7,1fr);border-left:1px solid #000;border-top:1px solid #000}
+.informe-preview .hoja-cab{text-align:center;font-weight:800;border-right:1px solid #000;border-bottom:1px solid #000}
+.informe-preview .hoja-vacio,.informe-preview .hoja-dia{border-right:1px solid #000;border-bottom:1px solid #000;min-height:60px;padding:2px 3px;font-size:.7rem;overflow:hidden}
+.informe-preview .hoja-dia-hospital{border:3px solid #000}
+.informe-preview .hoja-num{display:block}
+.informe-preview .hoja-hosp{display:block;font-weight:900}
+.informe-preview .hoja-med{display:block}
+.informe-preview .hoja-ciclo{display:block;font-weight:800;text-decoration:underline}
+.informe-preview .hoja-contacto{margin-top:14px;border-top:2px solid #000}
+
+/* Banner de validación en el thead: se repite en cada página impresa (Chrome/Edge). */
+.hoja-tabla thead{display:table-header-group}
+.hoja-tabla th.aviso-pendiente-mes{border:3px solid #000;text-align:center;font-weight:800;background:#fff;font-size:11pt}

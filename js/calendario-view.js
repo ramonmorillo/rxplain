@@ -132,6 +132,8 @@
     return html;
   }
 
+  var precargarImpl = null;
+
   function mount(root) {
     if (!RxData.list().length) {
       root.innerHTML =
@@ -148,7 +150,22 @@
     var canBuild = !!window.RxBuilder;
     var state = { id: null, start: todayIso(), n: 1, delays: {} };
 
+    var SUBS = [["farmacos", "Fármacos"], ["esquemas", "Esquemas"], ["calendario", "Calendario"], ["informe", "Informe del paciente"]];
+    var SUB_DEFAULT = "calendario";
+    function panelAttrs(n) {
+      return ' role="tabpanel" id="sub-' + n + '" aria-labelledby="sub-btn-' + n + '"' + (n === SUB_DEFAULT ? "" : " hidden");
+    }
+
     root.innerHTML =
+      '<nav class="cal-subtabs" id="subtabs" role="tablist" aria-label="Secciones del calendario">' +
+      SUBS.map(function (s) {
+        var on = s[0] === SUB_DEFAULT;
+        return '<button type="button" role="tab" id="sub-btn-' + s[0] + '" aria-controls="sub-' + s[0] +
+          '" aria-selected="' + on + '" tabindex="' + (on ? 0 : -1) + '">' + s[1] + "</button>";
+      }).join("") + "</nav>" +
+      '<section class="cal-subpanel"' + panelAttrs("farmacos") + ">" +
+      '<div id="farmacos_root"><p>Próximamente</p></div></section>' +
+      '<section class="cal-subpanel"' + panelAttrs("esquemas") + ">" +
       '<form class="cal-form" onsubmit="return false">' +
       '<div class="cal-selector">' +
       '<label>Buscar esquema <input type="search" id="cal_buscar" autocomplete="off" placeholder="Nombre, fármaco, área…"></label> ' +
@@ -156,15 +173,28 @@
       areas.map(function (a) { return '<option value="' + esc(a) + '">' + esc(a) + "</option>"; }).join("") +
       "</select></label> " +
       '<label>Esquema <select id="cal_esquema"></select></label></div>' +
+      (canBuild ? '<button type="button" id="cal_nueva" class="btn btn-sec" aria-expanded="false" aria-controls="cal_constructor">Crear pauta propia</button>' : "") +
+      "</form>" +
+      '<section id="cal_constructor" class="cal-constructor" hidden aria-label="Crear pauta propia"></section></section>' +
+      '<section class="cal-subpanel"' + panelAttrs("calendario") + ">" +
+      '<div id="cal_resumen" class="cal-resumen"><span id="cal_resumen_txt"></span> ' +
+      '<button type="button" id="cal_cambiar" class="btn btn-sec">Cambiar esquema</button></div>' +
+      '<form class="cal-form" onsubmit="return false">' +
       '<label>Fecha de inicio <input type="date" id="cal_inicio"></label> ' +
       '<label><span id="cal_ciclos_lbl">Ciclos</span> <input id="cal_ciclos" type="number" inputmode="numeric" min="1" max="60"></label>' +
-      '<label>Identificador del paciente (opcional, no se guarda) <input id="cal_paciente" type="text" autocomplete="off"></label> ' +
-      '<button type="button" id="cal_imprimir" class="btn">Imprimir hoja del paciente</button> ' +
-      (canBuild ? '<button type="button" id="cal_nueva" class="btn btn-sec" aria-expanded="false" aria-controls="cal_constructor">Crear pauta propia</button>' : "") +
       '<div id="cal_retrasos" class="cal-retrasos"></div></form>' +
-      '<section id="cal_constructor" class="cal-constructor" hidden aria-label="Crear pauta propia"></section>' +
       '<div id="cal_avisos" class="cal-avisos"></div>' +
-      '<div id="cal_meses" class="cal-meses"></div>';
+      '<div id="cal_meses" class="cal-meses"></div></section>' +
+      '<section class="cal-subpanel"' + panelAttrs("informe") + ">" +
+      '<form class="cal-form" onsubmit="return false">' +
+      '<label>Identificador del paciente (opcional, no se guarda) <input id="cal_paciente" type="text" autocomplete="off"></label> ' +
+      '<button type="button" id="cal_imprimir" class="btn">Imprimir hoja del paciente</button></form>' +
+      '<div id="informe_preview" class="informe-preview" aria-label="Vista previa del informe"></div></section>';
+
+    var farRoot = root.querySelector("#farmacos_root");
+    if (farRoot && window.RxFarmacos && window.RxCima) window.RxFarmacos.mount(farRoot);
+
+    function goSub(name) { if (window.RxSubtabs) window.RxSubtabs.show(name); }
 
     var selEl = root.querySelector("#cal_esquema");
     var buscarEl = root.querySelector("#cal_buscar");
@@ -256,17 +286,52 @@
       return { r: r, schedule: RxEngine.buildSchedule(r, { start: start, n: cicEl.value, delays: state.delays }) };
     }
 
+    function paintResumen() {
+      var r = regimen();
+      root.querySelector("#cal_resumen_txt").textContent = r
+        ? r.nombre + " · " + r.linea + " · " + (r.estado === "validado" ? "validado" : "pendiente de validación")
+        : "Ningún esquema seleccionado.";
+    }
+
     function paint(rebuildDelayInputs) {
+      paintResumen();
       var b = build();
-      if (!b) { mesesEl.innerHTML = ""; avisosEl.innerHTML = ""; return; }
+      if (!b) { mesesEl.innerHTML = ""; avisosEl.innerHTML = ""; paintPreview(); return; }
       if (!b.schedule) {
         avisosEl.innerHTML = '<p class="aviso">Indique una fecha de inicio válida.</p>';
         mesesEl.innerHTML = "";
+        paintPreview();
         return;
       }
       if (rebuildDelayInputs) rebuildDelays(b.schedule);
       avisosEl.innerHTML = renderAvisos(b.r, b.schedule);
       mesesEl.innerHTML = renderMonths(b.schedule);
+      paintPreview();
+    }
+
+    function hoy() {
+      var h = window.RxCalendar && typeof window.RxCalendar.hoy === "function" ? window.RxCalendar.hoy() : null;
+      return validIso(h) ? h : todayIso();
+    }
+
+    // Mismo HTML para la vista previa y para la hoja impresa.
+    function sheetHTML(b) {
+      return window.RxSheet.buildSheetHTML(b.schedule, b.r, {
+        paciente: root.querySelector("#cal_paciente").value.trim(),
+        profesional: { nombre: val("pharm_name"), centro: val("center"), contacto: val("contact"), fecha: val("date") },
+        hoy: hoy()
+      });
+    }
+
+    function paintPreview() {
+      var host = root.querySelector("#informe_preview");
+      if (!host) return;
+      var b = build();
+      if (!window.RxSheet || !b || !b.schedule) {
+        host.innerHTML = '<p class="aviso">Indique un esquema y una fecha de inicio válida para ver el informe.</p>';
+        return;
+      }
+      host.innerHTML = sheetHTML(b);
     }
 
     function val(id) { var el = document.getElementById(id); return el ? el.value.trim() : ""; }
@@ -275,19 +340,18 @@
       var b = build();
       if (!b) {
         avisosEl.innerHTML = '<p class="aviso">Seleccione un esquema.</p>';
+        goSub("calendario");
         return;
       }
       if (!b.schedule) {
         avisosEl.innerHTML = '<p class="aviso">Indique una fecha de inicio válida.</p>';
+        goSub("calendario");
         return;
       }
       limpiarHoja();
       var host = document.getElementById("hojaPaciente");
       if (!host || !window.RxSheet) return;
-      host.innerHTML = window.RxSheet.buildSheetHTML(b.schedule, b.r, {
-        paciente: root.querySelector("#cal_paciente").value.trim(),
-        profesional: { nombre: val("pharm_name"), centro: val("center"), contacto: val("contact"), fecha: val("date") }
-      });
+      host.innerHTML = sheetHTML(b);
       document.body.dataset.printing = "calendario";
       host.hidden = false;
       window.addEventListener("afterprint", limpiarHoja, { once: true });
@@ -311,6 +375,19 @@
       if (t) limpiarHoja();
     }, true);
     root.querySelector("#cal_imprimir").addEventListener("click", imprimir);
+    root.querySelector("#cal_paciente").addEventListener("input", paintPreview);
+    // Datos del profesional (pestaña Infografía): refrescan la vista previa.
+    document.addEventListener("input", function (e) {
+      var id = e.target && e.target.id;
+      if (id === "pharm_name" || id === "center" || id === "contact" || id === "date") paintPreview();
+    });
+    document.addEventListener("click", function (e) {
+      if (e.target && e.target.closest && e.target.closest("#sub-btn-informe")) paintPreview();
+    });
+    // Mostrar Informe (clic, flechas o API) o volver a la pestaña Calendario: la vista previa se repinta.
+    document.addEventListener("rx:subtab", function (e) { if (e.detail && e.detail.name === "informe") paintPreview(); });
+    document.addEventListener("rx:tab", function (e) { if (e.detail && e.detail.name === "calendario") paintPreview(); });
+    root.querySelector("#cal_cambiar").addEventListener("click", function () { goSub("esquemas"); });
 
     selEl.addEventListener("change", function () { resetForRegimen(); paint(true); });
     function onFilter() {
@@ -430,6 +507,41 @@
       return f;
     }
 
+    // Precarga desde un borrador (p. ej. ficha técnica). Lo que no se conoce queda vacío:
+    // área y lugar se dejan en blanco a propósito y la dosis la escribe el farmacéutico.
+    function precargar(f) {
+      if (!consBtn || !f) return false;
+      renderConstructor();
+      consEl.hidden = false;
+      consBtn.setAttribute("aria-expanded", "true");
+      var area = consEl.querySelector("#cb_area");
+      area.insertBefore(new Option("(elija el área)", ""), area.firstChild);
+      area.value = "";
+      if (f.nombre !== undefined) consEl.querySelector("#cb_nombre").value = f.nombre;
+      if (f.tipo) consEl.querySelector("#cb_tipo").value = f.tipo;
+      if (f.ciclo_dias !== undefined) consEl.querySelector("#cb_ciclo").value = String(f.ciclo_dias);
+      consEl.querySelector("#cb_items").innerHTML = "";
+      (f.items && f.items.length ? f.items : [{}]).forEach(function (it) {
+        addRow();
+        var row = consEl.querySelector("#cb_items").lastChild;
+        var lug = row.querySelector('[data-f="lugar"]');
+        lug.insertBefore(new Option("(elija el lugar)", ""), lug.firstChild);
+        lug.value = "";
+        Object.keys(it).forEach(function (k) {
+          var e = row.querySelector('[data-f="' + k + '"]');
+          if (e) e.value = String(it[k]);
+        });
+        var vd = row.querySelector('[data-f="veces_al_dia"]');
+        if (vd && vd.value === "") vd.setAttribute("placeholder", "sin dato en la ficha (vacío = 1): indíquelo");
+      });
+      applyTipo();
+      setErr("");
+      var first = consEl.querySelector("#cb_nombre");
+      if (first && first.focus) first.focus();
+      return true;
+    }
+    precargarImpl = precargar;
+
     function cerrarConstructor() {
       consEl.hidden = true;
       if (consBtn) consBtn.setAttribute("aria-expanded", "false");
@@ -454,6 +566,7 @@
       resetForRegimen();
       paint(true);
       cerrarConstructor();
+      goSub("calendario");
       var host = root.querySelector("#cal_avisos");
       if (host && host.scrollIntoView) { try { host.scrollIntoView(); } catch (e) { /* jsdom */ } }
     }
@@ -497,7 +610,7 @@
     paint(true);
   }
 
-  window.RxCalendar = { mount: mount, renderMonths: renderMonths, conflicts: conflicts };
+  window.RxCalendar = { mount: mount, precargar: function (f) { return precargarImpl ? precargarImpl(f) : false; }, renderMonths: renderMonths, conflicts: conflicts };
 
   function auto() {
     var root = document.getElementById("calendarioRoot");
