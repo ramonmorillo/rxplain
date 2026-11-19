@@ -188,7 +188,8 @@
       '<section class="cal-subpanel"' + panelAttrs("informe") + ">" +
       '<form class="cal-form" onsubmit="return false">' +
       '<label>Identificador del paciente (opcional, no se guarda) <input id="cal_paciente" type="text" autocomplete="off"></label> ' +
-      '<button type="button" id="cal_imprimir" class="btn">Imprimir hoja del paciente</button></form></section>';
+      '<button type="button" id="cal_imprimir" class="btn">Imprimir hoja del paciente</button></form>' +
+      '<div id="informe_preview" class="informe-preview" aria-label="Vista previa del informe"></div></section>';
 
     var farRoot = root.querySelector("#farmacos_root");
     if (farRoot && window.RxFarmacos && window.RxCima) window.RxFarmacos.mount(farRoot);
@@ -295,15 +296,42 @@
     function paint(rebuildDelayInputs) {
       paintResumen();
       var b = build();
-      if (!b) { mesesEl.innerHTML = ""; avisosEl.innerHTML = ""; return; }
+      if (!b) { mesesEl.innerHTML = ""; avisosEl.innerHTML = ""; paintPreview(); return; }
       if (!b.schedule) {
         avisosEl.innerHTML = '<p class="aviso">Indique una fecha de inicio válida.</p>';
         mesesEl.innerHTML = "";
+        paintPreview();
         return;
       }
       if (rebuildDelayInputs) rebuildDelays(b.schedule);
       avisosEl.innerHTML = renderAvisos(b.r, b.schedule);
       mesesEl.innerHTML = renderMonths(b.schedule);
+      paintPreview();
+    }
+
+    function hoy() {
+      var h = window.RxCalendar && typeof window.RxCalendar.hoy === "function" ? window.RxCalendar.hoy() : null;
+      return validIso(h) ? h : todayIso();
+    }
+
+    // Mismo HTML para la vista previa y para la hoja impresa.
+    function sheetHTML(b) {
+      return window.RxSheet.buildSheetHTML(b.schedule, b.r, {
+        paciente: root.querySelector("#cal_paciente").value.trim(),
+        profesional: { nombre: val("pharm_name"), centro: val("center"), contacto: val("contact"), fecha: val("date") },
+        hoy: hoy()
+      });
+    }
+
+    function paintPreview() {
+      var host = root.querySelector("#informe_preview");
+      if (!host) return;
+      var b = build();
+      if (!window.RxSheet || !b || !b.schedule) {
+        host.innerHTML = '<p class="aviso">Indique un esquema y una fecha de inicio válida para ver el informe.</p>';
+        return;
+      }
+      host.innerHTML = sheetHTML(b);
     }
 
     function val(id) { var el = document.getElementById(id); return el ? el.value.trim() : ""; }
@@ -323,10 +351,7 @@
       limpiarHoja();
       var host = document.getElementById("hojaPaciente");
       if (!host || !window.RxSheet) return;
-      host.innerHTML = window.RxSheet.buildSheetHTML(b.schedule, b.r, {
-        paciente: root.querySelector("#cal_paciente").value.trim(),
-        profesional: { nombre: val("pharm_name"), centro: val("center"), contacto: val("contact"), fecha: val("date") }
-      });
+      host.innerHTML = sheetHTML(b);
       document.body.dataset.printing = "calendario";
       host.hidden = false;
       window.addEventListener("afterprint", limpiarHoja, { once: true });
@@ -350,6 +375,15 @@
       if (t) limpiarHoja();
     }, true);
     root.querySelector("#cal_imprimir").addEventListener("click", imprimir);
+    root.querySelector("#cal_paciente").addEventListener("input", paintPreview);
+    // Datos del profesional (pestaña Infografía): refrescan la vista previa.
+    document.addEventListener("input", function (e) {
+      var id = e.target && e.target.id;
+      if (id === "pharm_name" || id === "center" || id === "contact" || id === "date") paintPreview();
+    });
+    document.addEventListener("click", function (e) {
+      if (e.target && e.target.closest && e.target.closest("#sub-btn-informe")) paintPreview();
+    });
     root.querySelector("#cal_cambiar").addEventListener("click", function () { goSub("esquemas"); });
 
     selEl.addEventListener("change", function () { resetForRegimen(); paint(true); });

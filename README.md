@@ -17,6 +17,12 @@ Genera una infografía imprimible de la medicación del paciente. Incluye una co
 - **Avisos de conflicto** (`js/calendario-view.js`, a partir de los festivos de `js/schedule-engine.js`): se señalan las visitas al hospital que caen en fin de semana o festivo. Los festivos que conoce el motor son una lista fija (nacionales más el Día de Andalucía) y Jueves y Viernes Santo calculados; **no incluye otros festivos autonómicos ni locales** (conviene que el farmacéutico los revise).
 - **Hoja del paciente imprimible**: si el esquema está en estado `pendiente`, la hoja lleva el banner "ESQUEMA PENDIENTE DE VALIDACIÓN — NO ENTREGAR AL PACIENTE" (en cabecera y repetido en cada mes). El banner se muestra salvo que `estado` sea exactamente `validado`. La tabla de medicación en casa indica en qué días del ciclo se toma cada fármaco.
 
+#### Flujo de las cuatro sub-pestañas
+1. **Fármacos**: buscar el medicamento en CIMA, leer el apartado 4.2 y, si se quiere, proponer un borrador de pauta (siempre editable y *pendiente*).
+2. **Esquemas**: elegir un esquema del catálogo o crear una pauta propia (el borrador se precarga aquí).
+3. **Calendario**: fecha de inicio, ciclos/dosis y retrasos; avisos de conflicto y calendario mensual.
+4. **Informe**: identificador del paciente (opcional, no se guarda) y vista previa en pantalla (`#informe_preview`), generada con la misma función que la hoja impresa y refrescada con cada cambio. Empieza por **«Sus próximas administraciones»**: las próximas 8 desde la fecha de inicio (o desde hoy si la pauta ya empezó), con día de la semana, fármaco, dosis y lugar (hospital: texto HOSPITAL y borde grueso; casa: «En casa»); si no queda ninguna, indica «0 administraciones». Termina con el aviso «Este informe no sustituye las indicaciones de su farmacéutico o médico». La vista previa no se imprime; el botón imprime la hoja construida aparte (`#hojaPaciente`). Nada se guarda fuera de la memoria de la página.
+
 > Los tres esquemas de mieloma múltiple incluidos (`mieloma-drd`, `mieloma-vrd-swog`, `mieloma-isa-kd`) están todos en `estado: "pendiente"`: proceden de una hoja de costes del Servicio y **no han sido validados clínicamente**. No deben entregarse a pacientes hasta su revisión.
 
 ## Privacidad

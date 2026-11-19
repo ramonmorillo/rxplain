@@ -151,6 +151,35 @@
     return out;
   }
 
+  var MAX_PROX = 8;
+  function hoyLocal() {
+    var t = new Date();
+    return t.getFullYear() + "-" + pad(t.getMonth() + 1) + "-" + pad(t.getDate());
+  }
+  function validIso(s) { return /^\d{4}-\d{2}-\d{2}$/.test(s || ""); }
+
+  // Próximas 8 administraciones: desde el inicio, o desde hoy (incluido) si la pauta ya empezó.
+  // hoy se inyecta por ctx.hoy; sin él, fecha local del navegador.
+  function proximas(events, first, hoy) {
+    var desde = first && first > hoy ? first : hoy;
+    var list = events.filter(function (e) { return e.date >= desde; }).sort(function (a, b) {
+      if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+      var x = String(a.farmaco), y = String(b.farmaco);
+      return x < y ? -1 : x > y ? 1 : 0;
+    }).slice(0, MAX_PROX);
+    var out = '<section class="hoja-proximas"><h2>Sus próximas administraciones</h2>';
+    if (!list.length) return out + "<p>0 administraciones pendientes a partir de la fecha de hoy.</p></section>";
+    out += '<table class="hoja-tabla hoja-tabla-prox"><thead><tr><th>Día</th><th>Medicamento</th><th>Dosis</th><th>Dónde</th></tr></thead><tbody>';
+    list.forEach(function (e) {
+      var hosp = e.lugar === "hospital";
+      var donde = hosp ? "<strong>HOSPITAL</strong>" : e.lugar === "casa" ? "En casa" : "En casa" + (e.lugar === "casa_inyeccion" ? " (inyección)" : e.lugar ? " (" + esc(e.lugar) + ")" : "");
+      out += '<tr class="hoja-prox' + (hosp ? " hoja-prox-hospital" : "") + '"><td>' + esc(fmtLong(e.date)) + "</td><td>" +
+        esc(e.farmaco) + "</td><td>" + esc(e.dosis) + (Number(e.veces) > 1 ? " (" + esc(e.veces) + " veces al día)" : "") +
+        "</td><td>" + donde + "</td></tr>";
+    });
+    return out + "</tbody></table></section>";
+  }
+
   function contactBlock(p) {
     p = p || {};
     var parts = [];
@@ -179,10 +208,12 @@
       (regimen.linea ? " · " + esc(regimen.linea) : "") +
       (first ? " · <strong>Inicio:</strong> " + esc(fmtLong(first)) : "") +
       (nCiclos ? " · <strong>Ciclos:</strong> " + nCiclos : " · <strong>Dosis:</strong> " + g.dates.length) + "</p>";
+    html += proximas(events, first, validIso(ctx.hoy) ? ctx.hoy : hoyLocal());
     html += "<h2>Días que tiene que venir al hospital</h2>" + hospitalTable(g);
     html += "<h2>Medicación en casa</h2>" + homeMeds(events, regimen);
     html += '<h2>Calendario mensual</h2><div class="hoja-meses">' + months(schedule, g, pendiente) + "</div>";
     html += contactBlock(ctx.profesional);
+    html += '<p class="hoja-pie">Este informe no sustituye las indicaciones de su farmacéutico o médico.</p>';
     return html + "</article>";
   }
 
