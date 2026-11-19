@@ -35,12 +35,13 @@ test("fail-safe: solo 'validado' exacto omite el banner", () => {
   assert.ok(!buildSheetHTML(sched, regimen("validado"), vacio).includes(BANNER));
 });
 
-test("banner repetido en cada bloque mensual si no está validado", () => {
+test("banner en cada página impresa si no está validado", () => {
   const multi = { ...sched, end: "2027-01-20" };
   const h = buildSheetHTML(multi, regimen("pendiente"), vacio);
-  const meses = count(h, 'class="hoja-mes"');
-  assert.ok(meses >= 3);
-  assert.ok(count(h, BANNER) >= meses + 1);
+  const paginas = count(h, 'class="hoja-pagina ');
+  assert.ok(count(h, 'class="hoja-mes"') >= 3 && paginas >= 3);
+  assert.equal(count(h, BANNER), paginas);
+  for (const pg of h.split('<section class="hoja-pagina ').slice(1)) assert.ok(pg.includes(BANNER));
   const v = buildSheetHTML(multi, regimen("validado"), vacio);
   assert.equal(count(v, BANNER), 0);
   assert.ok(!v.includes("aviso-pendiente"));
@@ -56,7 +57,7 @@ const drdSched = () => {
 test("medicación en casa: columna 'Qué días' con rangos y filas por patrón de días", () => {
   const { r, s } = drdSched();
   const h = buildSheetHTML(s, r, vacio);
-  const casa = h.slice(h.indexOf("Medicación en casa"), h.indexOf("Calendario mensual"));
+  const casa = h.slice(h.indexOf("Medicación en casa"));
   assert.ok(casa.includes("Qué días"));
   assert.ok(casa.includes("Tome la medicación solo los días marcados en el calendario."));
   assert.ok(/<td>1–21<\/td>/.test(casa), "lenalidomida 1–21");
@@ -84,7 +85,7 @@ test("sin profesional no hay bloque de contacto; con él, solo campos rellenados
 test("hospital: HOSPITAL en texto, fármaco y lugar como texto", () => {
   const h = buildSheetHTML(sched, regimen("validado"), vacio);
   assert.ok(h.includes("HOSPITAL") && h.includes("hoja-dia-hospital"));
-  const casa = h.slice(h.indexOf("Medicación en casa"), h.indexOf("Calendario mensual"));
+  const casa = h.slice(h.indexOf("Medicación en casa"));
   const hosp = h.slice(h.indexOf("Días que tiene que venir"), h.indexOf("Medicación en casa"));
   assert.ok(casa.includes("Dexa") && casa.includes("20 mg") && !casa.includes("Dara"));
   assert.ok(hosp.includes("Dara") && !hosp.includes("Dexa"));
@@ -214,8 +215,7 @@ const PROX = "Sus próximas administraciones";
 const proxBlock = (h) => {
   const i = h.indexOf(PROX);
   assert.ok(i >= 0, "falta el bloque");
-  const j = h.indexOf("<h2>Días que tiene que venir");
-  return h.slice(i, j);
+  return h.slice(i, h.indexOf("</section>", i));
 };
 const evs = (list) => ({
   cycles: [{ n: 1, start: list[0].date, len: 28, fase: "C1" }],
@@ -231,14 +231,14 @@ test("próximas: orden por fecha, empate por fármaco, fecha con día de la sema
   ]);
   const b = proxBlock(buildSheetHTML(s, regimen("validado"), { ...vacio, hoy: "2026-11-01" }));
   assert.ok(b.indexOf("Alfa") < b.indexOf("Beta") && b.indexOf("Beta") < b.indexOf("Zeta"));
-  assert.ok(/lunes 23 de nov 2026/.test(b));
+  assert.ok(/lunes<\/span><span class="hoja-prox-dia">23<\/span><span class="hoja-prox-mes">nov 2026/.test(b));
 });
 
 test("próximas: límite de 8", () => {
   const list = [];
   for (let i = 0; i < 12; i++) list.push({ date: "2026-11-" + String(10 + i).padStart(2, "0"), farmaco: "F" + String(i).padStart(2, "0") });
   const b = proxBlock(buildSheetHTML(evs(list), regimen("validado"), { ...vacio, hoy: "2026-11-01" }));
-  assert.equal(count(b, "<tr class=\"hoja-prox"), 8);
+  assert.equal(count(b, 'class="hoja-prox-med"'), 8);
   assert.ok(b.includes("F07") && !b.includes("F08"));
 });
 
@@ -256,7 +256,7 @@ test("próximas: pauta ya empezada cuenta desde hoy (hoy incluido); no empezada,
 
 test("próximas: hospital con texto HOSPITAL y borde grueso; casa como 'En casa'", () => {
   const b = proxBlock(buildSheetHTML(sched, regimen("validado"), { ...vacio, hoy: "2026-11-01" }));
-  const filas = b.split("<tr").filter((t) => t.includes("class=\"hoja-prox"));
+  const filas = b.split(/<li class="hoja-prox[" ]/).slice(1);
   const h = filas.find((t) => t.includes("Dara")), c = filas.find((t) => t.includes("Dexa"));
   assert.ok(h.includes("hoja-prox-hospital") && h.includes("HOSPITAL") && h.includes("16 mg/kg"));
   assert.ok(c.includes("En casa") && !c.includes("HOSPITAL") && c.includes("20 mg"));
@@ -275,15 +275,15 @@ test("próximas: pauta por intervalo", () => {
     { date: "2026-12-21", cycle: 2, day: 29, farmaco: "Inyec", abrev: "", dosis: "100 mg", veces: 1, lugar: "casa_inyeccion", etiqueta: "" },
   ], end: "2026-12-21" };
   const b = proxBlock(buildSheetHTML(s, { nombre: "I", tipo: "intervalo", items: [{ farmaco: "Inyec", cada_dias: 28 }], estado: "validado" }, { ...vacio, hoy: "2026-11-01" }));
-  assert.equal(count(b, "<tr class=\"hoja-prox"), 2);
-  assert.ok(b.includes("En casa (inyección)"));
+  assert.equal(count(b, 'class="hoja-prox-med"'), 2);
+  assert.ok(b.includes("Inyección en casa"));
 });
 
 test("próximas: 0 administraciones -> mensaje, sin tabla", () => {
   const h = buildSheetHTML(sched, regimen("validado"), { ...vacio, hoy: "2027-06-01" });
   const b = proxBlock(h);
   assert.ok(b.includes("0 administraciones") && !b.includes("hoja-prox-hospital"));
-  assert.ok(h.includes("Calendario mensual"));
+  assert.ok(h.includes('class="hoja-mes"'));
 });
 
 test("próximas: banner pendiente intacto y pie de informe", () => {
@@ -331,32 +331,32 @@ test("vista previa: fecha vacía la vacía; CSS de impresión la oculta", async 
 });
 
 // ---- Final fix wave ----
-test("I1: banner dentro del thead de la tabla de hospital y de casa si no validado", () => {
+test("I1: cada página empieza con el aviso; las tablas no llevan aviso propio", () => {
   const multi = { ...sched, end: "2027-01-20" };
   for (const estado of ["pendiente", undefined, "otro"]) {
     const h = buildSheetHTML(multi, regimen(estado), vacio);
-    const tablas = h.match(/<table class="hoja-tabla">[\s\S]*?<\/table>/g) || [];
-    assert.equal(tablas.length, 2, String(estado));
-    for (const t of tablas) {
-      const thead = t.match(/<thead>[\s\S]*?<\/thead>/)[0];
-      assert.ok(thead.includes(BANNER), String(estado));
-      assert.ok(/<th colspan="\d+" class="aviso-pendiente-mes">/.test(thead));
-      assert.ok(!t.slice(t.indexOf("</thead>")).includes(BANNER));
+    for (const pg of h.split('<section class="hoja-pagina ').slice(1)) {
+      const i = pg.indexOf('<p class="aviso-pendiente hoja-banner">');
+      assert.ok(i >= 0 && i < pg.indexOf('<div class="hoja-cuerpo">'), String(estado));
     }
+    for (const t of h.match(/<table[\s\S]*?<\/table>/g) || []) assert.ok(!t.includes(BANNER));
   }
-  const v = buildSheetHTML(multi, regimen("validado"), vacio);
-  for (const t of v.match(/<table class="hoja-tabla">[\s\S]*?<\/table>/g)) assert.ok(!t.includes(BANNER));
 });
 
-test("I1: mieloma-isa-kd 12 ciclos pendiente -> banner en thead de la tabla larga", () => {
+test("I1: mieloma-isa-kd 12 ciclos pendiente -> aviso y número de hoja en todas las páginas", () => {
   const RxData = require("../js/regimen-data.js");
   require("../data/regimens/mieloma-isa-kd.js");
   const r = { ...RxData.get("mieloma-isa-kd"), estado: "pendiente" };
   const s = globalThis.RxEngine.buildSchedule(r, { start: "2026-11-23", n: 12 });
   const h = buildSheetHTML(s, r, vacio);
-  const t = h.match(/<table class="hoja-tabla"><thead>[\s\S]*?<\/table>/)[0];
-  assert.ok(t.split("<tr>").length > 40);
-  assert.ok(t.match(/<thead>[\s\S]*?<\/thead>/)[0].includes(BANNER));
+  const paginas = h.split('<section class="hoja-pagina ').slice(1);
+  assert.ok(paginas.length >= 6);
+  paginas.forEach((pg, i) => {
+    assert.ok(pg.includes(BANNER));
+    assert.ok(pg.includes("Hoja " + (i + 1) + " de " + paginas.length));
+  });
+  // ningún mes repartido: cada hoja-mes está entero dentro de una página
+  for (const pg of paginas) assert.equal(count(pg, '<section class="hoja-mes"'), count(pg, "hoja-mes-titulo"));
 });
 
 test("M2: próximas muestra la etiqueta tras la dosis", () => {
@@ -385,4 +385,73 @@ test("M1: vista previa se repinta al mostrar Informe y al volver a la pestaña C
   assert.ok(prev.innerHTML.includes("Dra. Tercera"));
   assert.deepEqual(dom.errors, []);
   dom.window.close();
+});
+
+// ---- Rediseño (Task 2) ----
+const MSG = "Consulte con su farmacéutico ante cualquier cambio de día de administración.";
+const pags = (h) => h.split('<section class="hoja-pagina ').slice(1);
+
+test("mensaje fijo destacado en portada y en el pie de cada página", () => {
+  const h = buildSheetHTML({ ...sched, end: "2027-03-20" }, regimen("validado"), vacio);
+  const ps = pags(h);
+  assert.ok(ps[0].includes('<div class="hoja-mensaje" role="note">'));
+  assert.ok(ps[0].indexOf(MSG) < ps[0].indexOf("Sus próximas"));
+  for (const pg of ps) assert.ok(pg.includes('<p class="hoja-pie-msg">' + MSG + "</p>"));
+});
+
+test("contacto: hospital, farmacéutico y teléfono solo si no están vacíos", () => {
+  const ctx = (p) => ({ paciente: "", profesional: { nombre: "", centro: "", contacto: "", fecha: "", ...p } });
+  assert.ok(!buildSheetHTML(sched, regimen("validado"), ctx({})).includes("hoja-contacto"));
+  const h = buildSheetHTML(sched, regimen("validado"), ctx({ contacto: "+34 955 01 50 00" }));
+  const c = h.slice(h.indexOf('class="hoja-contacto"'), h.indexOf("</section>", h.indexOf('class="hoja-contacto"')));
+  assert.ok(c.includes("Teléfono") && c.includes("+34 955 01 50 00"));
+  assert.ok(!c.includes("Hospital</dt>") && !c.includes("Farmacéutico/a responsable"));
+  const t = buildSheetHTML(sched, regimen("validado"), ctx({ centro: "H. Valme", nombre: "Dra. X", contacto: "955" }));
+  assert.ok(t.includes("<dt>Hospital</dt><dd>H. Valme</dd>") && t.includes("<dt>Farmacéutico/a responsable</dt><dd>Dra. X</dd>"));
+  assert.ok(t.includes('<p class="hoja-hospital">H. Valme</p>') && t.includes('<p class="hoja-cab-hosp">H. Valme</p>'));
+});
+
+test("orden: portada, meses, visitas al hospital y medicación en casa", () => {
+  const { r, s } = drdSched();
+  const h = buildSheetHTML(s, r, { ...vacio, hoy: "2026-11-01" });
+  const a = h.indexOf("Su calendario de tratamiento"), b = h.indexOf("Sus próximas"), c = h.indexOf("Cómo leer el calendario"),
+    d = h.indexOf('class="hoja-mes"'), e = h.indexOf("Días que tiene que venir al hospital"), f = h.indexOf("Medicación en casa");
+  assert.ok(a < b && b < c && c < d && d < e && e < f, [a, b, c, d, e, f].join());
+  assert.ok(pags(h)[0].includes("Cómo leer el calendario") && !pags(h)[0].includes('class="hoja-mes"'));
+});
+
+test("escapa paciente y hospital también en la cabecera de cada página", () => {
+  const h = buildSheetHTML({ ...sched, end: "2027-01-20" }, regimen("pendiente"), {
+    paciente: '<b>"P"</b>', profesional: { centro: "<i>H</i>", nombre: "", contacto: "", fecha: "" },
+  });
+  assert.ok(!h.includes("<b>\"P\"</b>") && !h.includes("<i>H</i>"));
+  assert.ok(h.includes("&lt;b&gt;&quot;P&quot;&lt;/b&gt;") && h.includes("&lt;i&gt;H&lt;/i&gt;"));
+});
+
+test("meses: 2 o 3 por página, nunca partidos; hospital con HOSPITAL en la celda", () => {
+  const { r, s } = drdSched();
+  const h = buildSheetHTML(s, r, vacio);
+  for (const pg of pags(h)) assert.ok(count(pg, 'class="hoja-mes"') <= 3);
+  const conMeses = pags(h).filter((pg) => pg.includes('class="hoja-mes"'));
+  assert.ok(conMeses.slice(0, -1).every((pg) => count(pg, 'class="hoja-mes"') >= 2));
+  assert.ok(/class="hoja-dia hoja-dia-hospital[^"]*" data-date="2026-11-23"[\s\S]*?HOSPITAL/.test(h));
+});
+
+test("pauta indefinida recortada: el último ciclo cortado se une al grupo anterior en 'Qué días'", () => {
+  const { r } = drdSched();
+  const full = globalThis.RxEngine.buildSchedule(r, { start: "2026-11-19", n: 15 });
+  const hasta = "2027-12-31";
+  const s = { cycles: full.cycles, events: full.events.filter((e) => e.date <= hasta), end: hasta };
+  const h = buildSheetHTML(s, r, { ...vacio, indefinida: true, hasta });
+  const casa = h.slice(h.indexOf("Medicación en casa"));
+  const len = casa.split("<tr>").filter((t) => t.includes("Lenalidomida"));
+  assert.equal(len.length, 1, len.join("|"));
+  assert.ok(len[0].includes("<td>1–21</td>"));
+  assert.ok(!/ciclo 15\)/.test(casa));
+});
+
+test("0 eventos: portada y resumen sin calendario ni errores", () => {
+  const h = buildSheetHTML({ cycles: [], events: [], end: "2026-11-23" }, regimen("pendiente"), vacio);
+  assert.ok(h.includes("0 administraciones") && h.includes("No hay visitas al hospital") && h.includes("No hay medicación para tomar en casa"));
+  assert.equal(count(h, BANNER), pags(h).length);
 });
