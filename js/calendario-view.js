@@ -132,6 +132,8 @@
     return html;
   }
 
+  var precargarImpl = null;
+
   function mount(root) {
     if (!RxData.list().length) {
       root.innerHTML =
@@ -468,6 +470,39 @@
       return f;
     }
 
+    // Precarga desde un borrador (p. ej. ficha técnica). Lo que no se conoce queda vacío:
+    // área y lugar se dejan en blanco a propósito y la dosis la escribe el farmacéutico.
+    function precargar(f) {
+      if (!consBtn || !f) return false;
+      renderConstructor();
+      consEl.hidden = false;
+      consBtn.setAttribute("aria-expanded", "true");
+      var area = consEl.querySelector("#cb_area");
+      area.insertBefore(new Option("(elija el área)", ""), area.firstChild);
+      area.value = "";
+      if (f.nombre !== undefined) consEl.querySelector("#cb_nombre").value = f.nombre;
+      if (f.tipo) consEl.querySelector("#cb_tipo").value = f.tipo;
+      if (f.ciclo_dias !== undefined) consEl.querySelector("#cb_ciclo").value = String(f.ciclo_dias);
+      consEl.querySelector("#cb_items").innerHTML = "";
+      (f.items && f.items.length ? f.items : [{}]).forEach(function (it) {
+        addRow();
+        var row = consEl.querySelector("#cb_items").lastChild;
+        var lug = row.querySelector('[data-f="lugar"]');
+        lug.insertBefore(new Option("(elija el lugar)", ""), lug.firstChild);
+        lug.value = "";
+        Object.keys(it).forEach(function (k) {
+          var e = row.querySelector('[data-f="' + k + '"]');
+          if (e) e.value = String(it[k]);
+        });
+      });
+      applyTipo();
+      setErr("");
+      var first = consEl.querySelector("#cb_nombre");
+      if (first && first.focus) first.focus();
+      return true;
+    }
+    precargarImpl = precargar;
+
     function cerrarConstructor() {
       consEl.hidden = true;
       if (consBtn) consBtn.setAttribute("aria-expanded", "false");
@@ -536,7 +571,7 @@
     paint(true);
   }
 
-  window.RxCalendar = { mount: mount, renderMonths: renderMonths, conflicts: conflicts };
+  window.RxCalendar = { mount: mount, precargar: function (f) { return precargarImpl ? precargarImpl(f) : false; }, renderMonths: renderMonths, conflicts: conflicts };
 
   function auto() {
     var root = document.getElementById("calendarioRoot");

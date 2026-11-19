@@ -42,6 +42,36 @@
 
     function setEstado(t) { estado.textContent = t || ""; }
 
+    function describir(p) {
+      if (p.tipo === "diaria") return "Diaria: " + p.veces_al_dia + " vez/veces al día.";
+      if (p.tipo === "ciclo") return "Ciclo de " + p.ciclo_dias + " días; días " + p.dias_ciclo + (p.veces_al_dia ? "; " + p.veces_al_dia + " vez/veces al día" : "") + ".";
+      var t = "Intervalo: cada " + p.cada_dias + " días";
+      if (p.desplazamientos_dias && p.desplazamientos_dias.length) {
+        t += "; dosis iniciales en los días " + p.desplazamientos_dias.join(", ") +
+          "; primer mantenimiento: " + (p.primer_mantenimiento_dia === "" ? "sin determinar" : "día " + p.primer_mantenimiento_dia);
+      }
+      return t + ".";
+    }
+
+    function usar(p) {
+      var s = selected || {};
+      var farmaco = s.pactivos || s.nombre || "";
+      var it = { farmaco: farmaco, abrev: farmaco.slice(0, 4), dosis: "", lugar: "" };
+      var f = { nombre: farmaco + " — borrador de la ficha técnica (nº reg. " + (s.nregistro || "—") + ")", items: [it] };
+      if (p.tipo === "intervalo") {
+        f.tipo = "intervalo";
+        it.desplazamientos_dias = (p.desplazamientos_dias || []).join(",");
+        it.primer_mantenimiento_dia = p.primer_mantenimiento_dia;
+        it.cada_dias = p.cada_dias;
+      } else {
+        f.tipo = "ciclos";
+        f.ciclo_dias = p.ciclo_dias || "";
+        it.dias = p.dias_ciclo || "";
+        if (p.veces_al_dia) it.veces_al_dia = p.veces_al_dia;
+      }
+      if (window.RxCalendar && window.RxCalendar.precargar(f) && window.RxSubtabs) window.RxSubtabs.show("esquemas");
+    }
+
     function elegir(m) {
       var my = ++seq;
       selected = { nregistro: m.nregistro, pactivos: m.pactivos, nombre: m.nombre, url: m.url };
@@ -51,16 +81,42 @@
       var sub = el("p", { class: "tiny" }, "Principio activo: " + (m.pactivos || "—") + " · nº registro " + m.nregistro);
       var a = el("a", { href: m.url, target: "_blank", rel: "noopener" }, "Ver ficha técnica en CIMA");
       var pre = el("pre", { id: "far_texto", class: "far-texto" }, "");
-      var prop = el("button", { type: "button", id: "far_proponer", class: "btn btn-sec", disabled: "", title: "Disponible en la siguiente fase" }, "Proponer pauta");
+      var prop = el("button", { type: "button", id: "far_proponer", class: "btn btn-sec", disabled: "" }, "Proponer pauta");
+      var borrador = el("p", { class: "aviso far-borrador", id: "far_borrador" },
+        "Borrador automático: revíselo y complételo; no sustituye la validación farmacéutica.");
+      var propLista = el("ul", { id: "far_propuestas", class: "far-propuestas" });
+      var avLista = el("ul", { id: "far_avisos", class: "far-avisos" });
       ficha.appendChild(h); ficha.appendChild(sub);
       var p = el("p"); p.appendChild(a); ficha.appendChild(p);
-      ficha.appendChild(pre); ficha.appendChild(prop);
+      ficha.appendChild(pre); ficha.appendChild(borrador); ficha.appendChild(prop);
+      ficha.appendChild(propLista); ficha.appendChild(avLista);
+      var textoFt = "";
+      prop.addEventListener("click", function () {
+        propLista.textContent = ""; avLista.textContent = "";
+        var r = window.RxPosologia.extraer(textoFt);
+        r.propuestas.forEach(function (pp) {
+          var li = el("li", { class: "far-propuesta" });
+          li.appendChild(el("blockquote", { class: "far-frase" }, pp.frase));
+          li.appendChild(el("p", { class: "tiny" }, describir(pp)));
+          li.appendChild(el("p", { class: "tiny" }, pp.notas));
+          var b = el("button", { type: "button", class: "btn" }, "Usar en el constructor");
+          b.addEventListener("click", function () { usar(pp); });
+          li.appendChild(b);
+          propLista.appendChild(li);
+        });
+        r.avisos.forEach(function (t) { avLista.appendChild(el("li", {}, t)); });
+        setEstado(r.propuestas.length
+          ? r.propuestas.length + " propuesta(s) de pauta. Compruebe cada una con la frase de la ficha."
+          : "No se propone ninguna pauta.");
+      });
       setEstado("Cargando el apartado 4.2…");
       var c;
       try { c = client().apartado(m.nregistro, "4.2"); } catch (e) { c = Promise.reject(e); }
       c.then(function (r) {
         if (my !== seq) return;
         pre.textContent = r.texto;
+        textoFt = r.texto;
+        prop.disabled = false;
         setEstado("Apartado 4.2 cargado. Compruebe siempre el texto en la ficha técnica oficial.");
       }, function (e) {
         if (my !== seq) return;

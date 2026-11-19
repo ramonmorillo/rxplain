@@ -105,6 +105,18 @@ La sub-pestaña **Fármacos** busca un medicamento en CIMA/AEMPS (`/medicamentos
 
 **Limitaciones:** no ha podido probarse contra CIMA real (el entorno de desarrollo no tiene acceso); los tests usan respuestas simuladas. El formato del endpoint `docSegmentado` no está verificado, por lo que el código acepta JSON o HTML/texto y, si falla o viene vacío, muestra un aviso y el enlace a la ficha técnica en CIMA. El texto del 4.2 es solo orientativo: la ficha oficial manda. La llamada solo ocurre al pulsar Buscar/Enter o al elegir un resultado, y nunca incluye datos del paciente.
 
+### Borrador de pauta desde la ficha técnica
+
+Con el 4.2 cargado, **Proponer pauta** (`js/posologia-ft.js`) lee solo la *frecuencia* y muestra cada propuesta junto a la frase de la que sale; **Usar en el constructor** la precarga en el formulario de Esquemas. Es un borrador automático: no sustituye la validación farmacéutica, y la pauta que se cree queda siempre como *pendiente*.
+
+**Límites:**
+- Reconoce solo patrones simples en español: «una vez / dos veces… al día», «cada N horas» (si 24/N es entero de 1 a 6), «días 1 a 21 de ciclos de 28 días», «21 de cada 28 días», «cada N semanas/días» y «semanas 0, 2 y 4 y después cada 8 semanas». Admite coma decimal, pero solo si el resultado son días enteros («cada 1,5 semanas» no se propone).
+- No extrae ni calcula **dosis** (queda vacía), ni área ni lugar de administración (quedan sin elegir); el farmacéutico debe completarlos para poder crear la pauta.
+- Cada frase se analiza por separado: una pauta partida en dos frases («semanas 0, 2 y 4. Después, cada 8 semanas.») se propone como dos propuestas independientes, no fusionadas. Ante varias frecuencias se muestran varias propuestas.
+- En «semanas 0, 2 y 4 y después cada 8 semanas» el primer mantenimiento se sitúa en el día 56 (intervalo contado desde el día 0); la ficha puede querer contarlo desde la última dosis inicial. Si el mantenimiento no cae después de la última dosis inicial se deja vacío y se avisa.
+- Lo que no se entiende (rangos incoherentes, horas que no dividen 24, ajustes por peso, insuficiencia renal, etc.) no se propone: se muestra un aviso. El texto de la ficha es complejo; revise siempre el original.
+- Los tests usan frases sintéticas inventadas, no citas de fichas reales, y no se ha contrastado con fichas técnicas reales.
+
 ## Publicación
 
 La aplicación es estática (sin compilación) y funciona desde `file://`. **El método de publicación (p. ej. GitHub Pages) NO se ha verificado y debe confirmarlo el propietario del repositorio**; este README no afirma ninguna URL publicada.
