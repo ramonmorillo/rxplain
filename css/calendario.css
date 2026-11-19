@@ -7,3 +7,29 @@
 .tabNav [role="tab"]:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 
 @media print{.tabNav{display:none!important}#tab-calendario{display:none!important}}
+
+/* Vista del calendario */
+#calendarioRoot{max-width:1180px;margin:18px auto;padding:0 16px;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.cal-form{display:flex;flex-wrap:wrap;gap:12px 18px;align-items:end;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px}
+.cal-form label{display:flex;flex-direction:column;gap:4px;font-weight:600;font-size:.9rem}
+.cal-form input,.cal-form select{font:inherit;padding:6px 8px;border:1px solid var(--border);border-radius:6px}
+.cal-retrasos{display:flex;flex-wrap:wrap;gap:8px 12px;width:100%}
+.cal-retrasos input{width:5em}
+.cal-avisos{margin:12px 0}
+.aviso{margin:8px 0;padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface)}
+.aviso-pendiente{background:#fff4d6;border-color:#d9a400}
+.aviso-conflictos{background:#fde8e8;border-color:#c0392b}
+.lista-avisos{margin:6px 0 0;padding-left:20px}
+.cal-meses{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+.mes h3{margin:0 0 6px;font-size:1rem}
+.mes-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.mes-grid .cab{text-align:center;font-size:.75rem;font-weight:700;color:var(--muted)}
+.dia{min-height:54px;border:1px solid var(--border);border-radius:4px;padding:2px 3px;background:var(--surface);font-size:.7rem;overflow:hidden}
+.dia .num{font-weight:700;margin-right:3px}
+.dia.finde{background:#f3f3f3}
+.dia.festivo{background:#fde8e8}
+.dia-hospital{border-color:var(--primary);box-shadow:inset 0 0 0 2px var(--primary)}
+.etq-hospital{display:block;font-weight:800;font-size:.62rem;color:var(--primary)}
+.ciclo-ini{background:var(--accent);color:#fff;border-radius:3px;padding:0 3px;font-weight:700}
+.pildora{display:inline-block;margin:1px 1px 0 0;padding:0 4px;border-radius:8px;background:var(--primary);color:#fff;font-size:.62rem;font-weight:600}
+.pildora.lugar-casa,.pildora.lugar-casa_inyeccion{background:var(--muted)}
