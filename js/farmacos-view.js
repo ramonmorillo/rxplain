@@ -44,7 +44,7 @@
 
     function describir(p) {
       if (p.tipo === "diaria") return "Diaria: " + p.veces_al_dia + " vez/veces al día.";
-      if (p.tipo === "ciclo") return "Ciclo de " + p.ciclo_dias + " días; días " + p.dias_ciclo + (p.veces_al_dia ? "; " + p.veces_al_dia + " vez/veces al día" : "") + ".";
+      if (p.tipo === "ciclo") return "Ciclo de " + p.ciclo_dias + " días; días " + p.dias_ciclo + (p.veces_al_dia ? "; " + p.veces_al_dia + " vez/veces al día" : "; veces al día: sin dato en la ficha") + ".";
       var t = "Intervalo: cada " + p.cada_dias + " días";
       if (p.desplazamientos_dias && p.desplazamientos_dias.length) {
         t += "; dosis iniciales en los días " + p.desplazamientos_dias.join(", ") +
@@ -67,7 +67,7 @@
         f.tipo = "ciclos";
         f.ciclo_dias = p.ciclo_dias || "";
         it.dias = p.dias_ciclo || "";
-        if (p.veces_al_dia) it.veces_al_dia = p.veces_al_dia;
+        it.veces_al_dia = p.veces_al_dia || ""; // vacío = sin dato en la ficha (el constructor lo marca)
       }
       if (window.RxCalendar && window.RxCalendar.precargar(f) && window.RxSubtabs) window.RxSubtabs.show("esquemas");
     }
@@ -99,6 +99,7 @@
           li.appendChild(el("blockquote", { class: "far-frase" }, pp.frase));
           li.appendChild(el("p", { class: "tiny" }, describir(pp)));
           li.appendChild(el("p", { class: "tiny" }, pp.notas));
+          (pp.avisos || []).forEach(function (t) { li.appendChild(el("p", { class: "aviso far-aviso-prop" }, "Aviso: " + t)); });
           var b = el("button", { type: "button", class: "btn" }, "Usar en el constructor");
           b.addEventListener("click", function () { usar(pp); });
           li.appendChild(b);

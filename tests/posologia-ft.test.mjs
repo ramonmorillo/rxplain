@@ -225,3 +225,119 @@ test("UI: texto sin pauta muestra avisos y ninguna propuesta; la frase se escapa
   assert.equal(dom.window.__q, undefined);
   dom.window.close();
 });
+
+// ---- Ronda de correcciones 1 (frases sintéticas) ----
+function sinPropuesta(t, re) {
+  const r = RxPosologia.extraer(t);
+  assert.deepEqual(r.propuestas, [], t);
+  assert.ok(r.avisos.length >= 1, t);
+  if (re) assert.match(r.avisos.join(" | "), re, t);
+}
+
+test("F1: máximos, límites y condicionales no son pauta: sin propuesta y aviso con el calificador", () => {
+  sinPropuesta("Se puede repetir hasta un máximo de 3 veces al día.", /hasta|m[aá]ximo/i);
+  sinPropuesta("No tomar más de 3 veces al día.", /m[aá]s de/i);
+  sinPropuesta("La dosis máxima es 2 veces al día.", /m[aá]xim/i);
+  sinPropuesta("Puede repetirse como máximo cada 4 horas.", /m[aá]ximo/i);
+  sinPropuesta("Tomar un comprimido sin superar 2 dosis cada 24 horas.", /sin superar/i);
+  sinPropuesta("Si es necesario, puede aumentarse a dos veces al día.", /si es necesario|puede aumentarse/i);
+});
+
+test("F2: descanso / sin tratamiento / rangos de días con 'cada': nunca un intervalo engañoso", () => {
+  sinPropuesta("5 días de descanso de cada 28 días.", /descanso/i);
+  sinPropuesta("Días 1-14 cada 21 días y luego descanso.", /descanso/i);
+  let r = RxPosologia.extraer("Días 1-14 cada 21 días.");
+  assert.equal(r.propuestas.length, 1);
+  assert.equal(r.propuestas[0].tipo, "ciclo");
+  assert.equal(r.propuestas[0].dias_ciclo, "1-14");
+  assert.equal(r.propuestas[0].ciclo_dias, 21);
+  r = RxPosologia.extraer("1 comprimido una vez al día durante 21 días seguido de 7 días de descanso, en ciclos de 28 días.");
+  assert.equal(r.propuestas.length, 1);
+  assert.equal(r.propuestas[0].tipo, "ciclo");
+  assert.equal(r.propuestas[0].dias_ciclo, "1-21");
+  assert.equal(r.propuestas[0].ciclo_dias, 28);
+  assert.equal(r.propuestas[0].veces_al_dia, 1);
+  r = RxPosologia.extraer("Una vez al día durante 14 días seguido de 7 días sin tratamiento (ciclo de 21 días).");
+  assert.equal(r.propuestas.length, 1);
+  assert.equal(r.propuestas[0].dias_ciclo, "1-14");
+  assert.equal(r.propuestas[0].ciclo_dias, 21);
+  sinPropuesta("Una vez al día durante 21 días seguido de 7 días de descanso, en ciclos de 30 días.", /ciclo|coherent/i);
+  sinPropuesta("Tomar durante 21 días y descansar; ciclos de 28 días.", /descans|ciclo/i);
+});
+
+test("F3: inducción: 'semana 0, semana 4', días base 1, 'seguidas de'", () => {
+  let r = RxPosologia.extraer("Semana 0, semana 4 y después cada 12 semanas.");
+  assert.equal(r.propuestas.length, 1);
+  assert.deepEqual(r.propuestas[0].desplazamientos_dias, [0, 28]);
+  assert.equal(r.propuestas[0].cada_dias, 84);
+  assert.equal(r.propuestas[0].primer_mantenimiento_dia, 84);
+  r = RxPosologia.extraer("Días 1, 8 y 15 y después cada 28 días.");
+  assert.deepEqual(r.propuestas[0].desplazamientos_dias, [0, 7, 14]);
+  assert.match(r.propuestas[0].notas, /d[ií]a 1/i);
+  r = RxPosologia.extraer("Dosis de inducción en las semanas 0, 2 y 6, seguidas de cada 8 semanas.");
+  assert.equal(r.propuestas.length, 1);
+  assert.deepEqual(r.propuestas[0].desplazamientos_dias, [0, 14, 42]);
+  assert.equal(r.propuestas[0].cada_dias, 56);
+});
+
+test("F3b: unidades mezcladas en la lista inicial -> sin propuesta y aviso", () => {
+  sinPropuesta("Semanas 0, días 14 y 28 y después cada 8 semanas.", /unidad|mezcl/i);
+});
+
+test("F4: inducción y mantenimiento en frases separadas: una sola propuesta unida (o aviso), nunca la inducción perdida", () => {
+  let r = RxPosologia.extraer("Semanas 0, 2 y 4. Después, cada 8 semanas.");
+  assert.equal(r.propuestas.length, 1);
+  assert.deepEqual(r.propuestas[0].desplazamientos_dias, [0, 14, 28]);
+  assert.equal(r.propuestas[0].cada_dias, 56);
+  assert.match(r.propuestas[0].frase, /Semanas 0, 2 y 4\..*Después, cada 8 semanas/);
+  r = RxPosologia.extraer("Después, cada 8 semanas.");
+  assert.deepEqual(r.propuestas, []);
+  assert.ok(r.avisos.length >= 1);
+  r = RxPosologia.extraer("Semanas 0, 2 y 4. Se vigilará al paciente.");
+  assert.deepEqual(r.propuestas, []);
+  assert.match(r.avisos.join(" "), /inicial|inducci/i);
+});
+
+test("F5: 'cada N horas' se une al ciclo de la misma frase como veces al día", () => {
+  const r = RxPosologia.extraer("Cada 12 horas los días 1 a 14 de ciclos de 21 días.");
+  assert.equal(r.propuestas.length, 1);
+  assert.equal(r.propuestas[0].tipo, "ciclo");
+  assert.equal(r.propuestas[0].veces_al_dia, 2);
+});
+
+test("F6: duración dejada fuera -> propuesta con aviso propio; alternativas -> sin propuesta", () => {
+  let r = RxPosologia.extraer("Administrar cada 4 semanas durante 12 semanas.");
+  assert.equal(r.propuestas.length, 1);
+  assert.equal(r.propuestas[0].cada_dias, 28);
+  assert.match(r.propuestas[0].avisos.join(" "), /duraci[oó]n.*12 semanas/i);
+  r = RxPosologia.extraer("Semanas 0, 2 y 4 y después cada 8 semanas durante 1 año.");
+  assert.equal(r.propuestas.length, 1);
+  assert.match(r.propuestas[0].avisos.join(" "), /duraci[oó]n.*1 a[nñ]o/i);
+  sinPropuesta("Cada 3 días o 4 días.", /alternativ|o /i);
+});
+
+test("menores: rango de intervalo, dedupe, palabras numéricas, 'cada 8 h', una vez a la semana, dosis de carga", () => {
+  sinPropuesta("Se aplica cada 2-4 semanas.", /rango/i);
+  assert.equal(RxPosologia.extraer("Cada dos semanas.").propuestas[0].cada_dias, 14);
+  assert.equal(RxPosologia.extraer("Una vez a la semana.").propuestas[0].cada_dias, 7);
+  assert.equal(RxPosologia.extraer("Tomar cada 8 h.").propuestas[0].veces_al_dia, 3);
+  assert.equal(RxPosologia.extraer("Una vez al día.\nUna vez al día.").propuestas.length, 1);
+  sinPropuesta("Dosis de carga de 2 comprimidos una vez al día.", /carga/i);
+});
+
+test("UI F5: ciclo sin veces al día en la ficha precarga el campo en blanco con marca 'sin dato'", async () => {
+  const { dom, d } = await ui("Los días 1 a 21 de ciclos de 28 días.");
+  d.getElementById("far_proponer").click();
+  d.querySelector("#far_propuestas li button").click();
+  const v = d.querySelector('#cal_constructor .cb-item [data-f="veces_al_dia"]');
+  assert.equal(v.value, "");
+  assert.match(v.placeholder, /sin dato/i);
+  dom.window.close();
+});
+
+test("UI F6: los avisos de cada propuesta se muestran", async () => {
+  const { dom, d } = await ui("Administrar cada 4 semanas durante 12 semanas.");
+  d.getElementById("far_proponer").click();
+  assert.match(d.querySelector("#far_propuestas li").textContent, /duraci[oó]n/i);
+  dom.window.close();
+});

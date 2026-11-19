@@ -494,6 +494,8 @@
           var e = row.querySelector('[data-f="' + k + '"]');
           if (e) e.value = String(it[k]);
         });
+        var vd = row.querySelector('[data-f="veces_al_dia"]');
+        if (vd && vd.value === "") vd.setAttribute("placeholder", "sin dato en la ficha (vacío = 1): indíquelo");
       });
       applyTipo();
       setErr("");
