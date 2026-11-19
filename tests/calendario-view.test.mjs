@@ -159,3 +159,42 @@ test("aviso en pantalla fail-safe: solo 'validado' exacto lo omite", async () =>
     dom.window.close();
   }
 });
+
+const MSG = "No se han podido cargar los esquemas. Compruebe que la carpeta data/ está publicada junto a index.html.";
+
+test("sin esquemas registrados (scripts de datos bloqueados) se muestra un mensaje visible y los controles quedan deshabilitados", async () => {
+  const dom = await loadPage({
+    beforeParse(window) {
+      const orig = window.HTMLScriptElement.prototype;
+      // Simula 404 de data/: el script de ayudas no se carga.
+      const desc = Object.getOwnPropertyDescriptor(orig, "src");
+      Object.defineProperty(orig, "src", {
+        configurable: true,
+        get: desc.get,
+        set(v) { desc.set.call(this, /data\/regimens\//.test(v) ? "data:text/javascript,void 0" : v); },
+      });
+    },
+  });
+  const d = dom.window.document;
+  // Si el bloqueo por src no aplica a scripts del HTML inicial, forzamos el estado vacío y remontamos.
+  if (dom.window.RxData.list().length) {
+    dom.window.RxData._reset();
+    dom.window.RxCalendar.mount(d.getElementById("calendarioRoot"));
+  }
+  const root = d.getElementById("calendarioRoot");
+  assert.match(root.textContent, /No se han podido cargar los esquemas/);
+  assert.ok(root.textContent.includes(MSG));
+  assert.ok(root.querySelector('[role="alert"]'));
+  assert.equal(d.getElementById("cal_esquema").disabled, true);
+  assert.equal(d.getElementById("cal_ciclos").disabled, true);
+  assert.equal(d.getElementById("cal_inicio").disabled, true);
+  dom.window.close();
+});
+
+test("con esquemas cargados no hay mensaje de error", async () => {
+  const dom = await loadPage();
+  const root = dom.window.document.getElementById("calendarioRoot");
+  assert.equal(root.querySelector('[role="alert"]'), null);
+  assert.equal(dom.window.document.getElementById("cal_esquema").disabled, false);
+  dom.window.close();
+});

@@ -133,6 +133,16 @@
   }
 
   function mount(root) {
+    if (!RxData.list().length) {
+      root.innerHTML =
+        '<form class="cal-form" onsubmit="return false">' +
+        '<label>Esquema <select id="cal_esquema" disabled></select></label> ' +
+        '<label>Fecha de inicio <input type="date" id="cal_inicio" disabled></label> ' +
+        '<label>Ciclos <input id="cal_ciclos" type="number" disabled></label></form>' +
+        '<p class="aviso" role="alert">No se han podido cargar los esquemas. ' +
+        "Compruebe que la carpeta data/ está publicada junto a index.html.</p>";
+      return;
+    }
     var groups = RxData.byArea();
     var areas = Object.keys(groups);
     var state = { id: null, start: todayIso(), n: 1, delays: {} };

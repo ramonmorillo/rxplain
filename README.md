@@ -31,7 +31,7 @@ Esta declaración describe el código del repositorio. Si se modifica el código
 
 ## Cómo añadir un esquema
 
-Cada esquema es un archivo en `data/regimens/` que llama a `RxData.register({...})`. Se valida al registrarse (`js/regimen-data.js`) y, si hay un error, lanza una excepción con el campo afectado. Usar de modelo `data/regimens/mieloma-drd.js` (por ciclos) y `data/regimens/mieloma-isa-kd.js`; los atajos para construir fármacos están en `data/regimens/_helpers.js`. El tipo `intervalo` no lo usa ninguno de los tres esquemas incluidos; hay un ejemplo sintético en `tests/fixtures/regimen-intervalo.mjs`.
+Cada esquema es un archivo en `data/regimens/` que llama a `RxData.register({...})`. Se valida al registrarse (`js/regimen-data.js`) y, si hay un error, lanza una excepción con el campo afectado. Usar de modelo `data/regimens/mieloma-drd.js` (por ciclos) y `data/regimens/mieloma-isa-kd.js`; los atajos para construir fármacos están en `data/regimens/helpers.js`. El tipo `intervalo` no lo usa ninguno de los tres esquemas incluidos; hay un ejemplo sintético en `tests/fixtures/regimen-intervalo.mjs`.
 
 **Un esquema debe proceder siempre de una fuente citable (ficha técnica, guía, protocolo del servicio). Nunca se inventa.** La herramienta no calcula dosis: `dosis` es texto que se muestra tal cual.
 
@@ -80,7 +80,7 @@ js/schedule-engine.js      Motor de calendarización (fechas, festivos)
 js/regimen-data.js         Registro y validador de esquemas
 js/calendario-view.js      Interfaz de la pestaña Calendario (incluye los avisos y la detección de conflictos)
 js/hoja-paciente.js        Hoja imprimible del paciente
-data/regimens/             Esquemas (+ _helpers.js)
+data/regimens/             Esquemas (+ helpers.js)
 tests/                     Pruebas (node --test)
 docs/superpowers/          Especificación y plan del desarrollo
 ```
@@ -97,3 +97,7 @@ Pendiente de realizar por el farmacéutico en Chrome y en Edge (no se ha podido 
 - [ ] (b) Generar una infografía de ejemplo ("Cargar ejemplo") e imprimir en vista previa: debe verse igual que antes de añadir la pestaña Calendario.
 - [ ] (c) En Calendario, cargar DRd con inicio en sábado y comprobar que aparece el aviso de conflicto.
 - [ ] (d) Imprimir la hoja del paciente: el banner de "pendiente" debe ser visible y legible en blanco y negro **y aparecer en CADA página impresa** de una hoja de varias páginas.
+
+## Publicación (GitHub Pages)
+
+El archivo `.nojekyll` (vacío, en la raíz) existe para evitar que Jekyll omita en silencio archivos y carpetas cuyo nombre empieza por `_` o `.`. Aun así, no se deben nombrar así los archivos que carga `index.html`; un test lo comprueba.

@@ -1,6 +1,7 @@
 (function () {
   var RX = typeof RxData !== "undefined" ? RxData : require("../../js/regimen-data.js");
-  var H = typeof RxHelpers !== "undefined" ? RxHelpers : require("./_helpers.js");
+  var H = typeof RxHelpers !== "undefined" ? RxHelpers : (typeof require === "function" ? require("./helpers.js") : null);
+  if (!H) { if (typeof console !== "undefined") console.error("RxHelpers no disponible: data/regimens/helpers.js no se cargó; esquema omitido."); return; }
   var R = H.R, len = H.len, dexH = H.dexH, dexC = H.dexC, dara = H.dara;
   RX.register({
     id: "mieloma-drd",
