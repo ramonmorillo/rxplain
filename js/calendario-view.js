@@ -148,6 +148,8 @@
       '<label>Esquema <select id="cal_esquema">' + opts + "</select></label> " +
       '<label>Fecha de inicio <input type="date" id="cal_inicio"></label> ' +
       '<label><span id="cal_ciclos_lbl">Ciclos</span> <input id="cal_ciclos" type="number" inputmode="numeric" min="1" max="60"></label>' +
+      '<label>Identificador del paciente (opcional, no se guarda) <input id="cal_paciente" type="text" autocomplete="off"></label> ' +
+      '<button type="button" id="cal_imprimir" class="btn">Imprimir hoja del paciente</button>' +
       '<div id="cal_retrasos" class="cal-retrasos"></div></form>' +
       '<div id="cal_avisos" class="cal-avisos"></div>' +
       '<div id="cal_meses" class="cal-meses"></div>';
@@ -202,6 +204,30 @@
       avisosEl.innerHTML = renderAvisos(b.r, b.schedule);
       mesesEl.innerHTML = renderMonths(b.schedule);
     }
+
+    function val(id) { var el = document.getElementById(id); return el ? el.value.trim() : ""; }
+
+    function imprimir() {
+      var b = build();
+      if (!b || !b.schedule) {
+        avisosEl.innerHTML = '<p class="aviso">Indique una fecha de inicio válida.</p>';
+        return;
+      }
+      var host = document.getElementById("hojaPaciente");
+      if (!host || !window.RxSheet) return;
+      host.innerHTML = window.RxSheet.buildSheetHTML(b.schedule, b.r, {
+        paciente: root.querySelector("#cal_paciente").value.trim(),
+        profesional: { nombre: val("pharm_name"), centro: val("center"), contacto: val("contact"), fecha: val("date") }
+      });
+      document.body.dataset.printing = "calendario";
+      window.addEventListener("afterprint", function done() {
+        window.removeEventListener("afterprint", done);
+        delete document.body.dataset.printing;
+        host.innerHTML = "";
+      });
+      window.print();
+    }
+    root.querySelector("#cal_imprimir").addEventListener("click", imprimir);
 
     selEl.addEventListener("change", function () { resetForRegimen(); paint(true); });
     iniEl.addEventListener("change", function () { paint(false); });

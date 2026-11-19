@@ -6,7 +6,31 @@
 .tabNav [role="tab"][aria-selected="true"]{color:#fff;background:var(--primary);border-color:var(--primary)}
 .tabNav [role="tab"]:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 
-@media print{.tabNav{display:none!important}#tab-calendario{display:none!important}}
+@media print{
+  .tabNav,#tab-calendario,#hojaPaciente{display:none!important}
+  body[data-printing="calendario"] .pageShell > :not(#hojaPaciente){display:none!important}
+  body[data-printing="calendario"] #hojaPaciente{display:block!important}
+}
+
+/* Hoja del paciente (solo visible al imprimir). Blanco y negro, tipografía del sistema. */
+#hojaPaciente{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#000;background:#fff;font-size:14pt;line-height:1.35}
+#hojaPaciente h1{font-size:22pt;margin:0 0 6px}
+#hojaPaciente h2{font-size:16pt;margin:16px 0 6px;break-after:avoid}
+#hojaPaciente .aviso-pendiente{border:3px solid #000;padding:8px;font-weight:800;text-align:center;background:#fff}
+.hoja-tabla{width:100%;border-collapse:collapse;font-size:13pt}
+.hoja-tabla th,.hoja-tabla td{border:1px solid #000;padding:4px 6px;text-align:left;vertical-align:top}
+.hoja-mes{break-inside:avoid;page-break-inside:avoid;margin-top:12px}
+.hoja-mes h3{font-size:15pt;margin:0 0 4px}
+.hoja-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:0;border-left:1px solid #000;border-top:1px solid #000}
+.hoja-cab{text-align:center;font-weight:800;border-right:1px solid #000;border-bottom:1px solid #000}
+.hoja-vacio,.hoja-dia{border-right:1px solid #000;border-bottom:1px solid #000;min-height:22mm;padding:2px 3px;font-size:9pt;overflow:hidden}
+.hoja-dia-hospital{border:4px solid #000}
+.hoja-num{display:block;font-size:12pt}
+.hoja-hosp{display:block;font-weight:900;font-size:10pt}
+.hoja-med{display:block}
+.hoja-ciclo{display:block;font-weight:800;text-decoration:underline}
+.hoja-contacto{margin-top:16px;border-top:2px solid #000;break-inside:avoid}
+.hoja-contacto p{margin:2px 0}
 
 /* Vista del calendario */
 #calendarioRoot{max-width:1180px;margin:18px auto;padding:0 16px;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
