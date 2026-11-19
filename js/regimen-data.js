@@ -111,9 +111,16 @@
     return out;
   }
 
+  // Quita un esquema del registro (p. ej. una pauta propia al empezar de nuevo). Devuelve true si existía.
+  function remove(id) {
+    var n = registry.length;
+    registry = registry.filter(function (r) { return r.id !== id; });
+    return registry.length !== n;
+  }
+
   function _reset() {
     registry = [];
   }
 
-  return { register: register, list: list, get: get, byArea: byArea, _reset: _reset };
+  return { register: register, list: list, get: get, byArea: byArea, remove: remove, _reset: _reset };
 });

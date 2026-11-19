@@ -250,3 +250,13 @@
 .cal-form label.cal-check,.cb-indef{flex-direction:row;align-items:center;font-weight:600}
 .cal-form label.cal-check input,.cb-indef input{padding:0}
 .aviso-recorte{border:3px solid #000;font-weight:600}
+
+/* Empezar de nuevo (confirmación en línea) */
+.cal-reinicio-barra{display:flex;justify-content:flex-end;margin:-6px 0 12px}
+.cal-reinicio{margin:0 0 14px;padding:12px 14px;border:2px solid #c0392b;border-radius:var(--radius-sm);background:#fff}
+.cal-reinicio p{margin:0 0 8px}
+.cal-reinicio label.cal-check{display:flex;flex-direction:row;justify-content:flex-start;gap:8px;align-items:center;font-weight:600;margin:0 0 10px;text-align:left}
+.cal-reinicio label.cal-check input{width:auto;margin:0;flex:none}
+.cal-reinicio-botones{display:flex;flex-wrap:wrap;gap:8px}
+#cal_reinicio_si{background:#c0392b;border-color:#c0392b;color:#fff}
+@media print{.cal-reinicio,.cal-reinicio-barra{display:none!important}}

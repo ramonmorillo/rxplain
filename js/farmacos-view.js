@@ -43,6 +43,17 @@
 
     function setEstado(t) { estado.textContent = t || ""; }
 
+    // Empezar de nuevo: vacía búsqueda, resultados, diagnóstico y apartado 4.2.
+    resetImpl = function () {
+      inp.value = "";
+      setEstado("");
+      diag.textContent = "";
+      lista.textContent = "";
+      ficha.textContent = "";
+      ficha.hidden = true;
+      selected = null;
+    };
+
     function describir(p) {
       if (p.tipo === "diaria") return "Diaria: " + p.veces_al_dia + " vez/veces al día.";
       if (p.tipo === "ciclo") return "Ciclo de " + p.ciclo_dias + " días; días " + p.dias_ciclo + (p.veces_al_dia ? "; " + p.veces_al_dia + " vez/veces al día" : "; veces al día: sin dato en la ficha") + ".";
@@ -176,5 +187,6 @@
     });
   }
 
-  window.RxFarmacos = { mount: mount, seleccionado: function () { return selected ? Object.assign({}, selected) : null; } };
+  var resetImpl = null;
+  window.RxFarmacos = { mount: mount, reset: function () { if (resetImpl) resetImpl(); }, seleccionado: function () { return selected ? Object.assign({}, selected) : null; } };
 })();

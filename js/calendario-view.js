@@ -193,6 +193,12 @@
         return '<button type="button" role="tab" id="sub-btn-' + s[0] + '" aria-controls="sub-' + s[0] +
           '" aria-selected="' + on + '" tabindex="' + (on ? 0 : -1) + '">' + s[1] + "</button>";
       }).join("") + "</nav>" +
+      '<div class="cal-reinicio-barra"><button type="button" id="cal_reiniciar" class="btn btn-sec" aria-expanded="false" aria-controls="cal_reinicio">↺ Empezar de nuevo</button></div>' +
+      '<div id="cal_reinicio" class="cal-reinicio" role="group" aria-label="Confirmar empezar de nuevo" hidden>' +
+      '<p><strong>Se borrarán los datos del paciente, la fecha, los ciclos, los retrasos y las búsquedas.</strong></p>' +
+      '<label class="cal-check"><input type="checkbox" id="cal_reinicio_todo"> Borrar también mis pautas propias y datos del profesional</label>' +
+      '<div class="cal-reinicio-botones"><button type="button" id="cal_reinicio_si" class="btn">Borrar</button> ' +
+      '<button type="button" id="cal_reinicio_no" class="btn btn-sec">Cancelar</button></div></div>' +
       '<section class="cal-subpanel"' + panelAttrs("farmacos") + ">" +
       '<div id="farmacos_root"><p>Próximamente</p></div></section>' +
       '<section class="cal-subpanel"' + panelAttrs("esquemas") + ">" +
@@ -457,6 +463,54 @@
     document.addEventListener("rx:subtab", function (e) { if (e.detail && e.detail.name === "informe") paintPreview(); });
     document.addEventListener("rx:tab", function (e) { if (e.detail && e.detail.name === "calendario") paintPreview(); });
     root.querySelector("#cal_cambiar").addEventListener("click", function () { goSub("esquemas"); });
+
+    // ---- Empezar de nuevo (confirmación en línea, sin window.confirm) ----
+    var reiBtn = root.querySelector("#cal_reiniciar");
+    var reiBox = root.querySelector("#cal_reinicio");
+    var reiTodo = root.querySelector("#cal_reinicio_todo");
+    function cerrarReinicio() {
+      reiBox.hidden = true;
+      reiTodo.checked = false;
+      reiBtn.setAttribute("aria-expanded", "false");
+    }
+    reiBtn.addEventListener("click", function () {
+      reiBox.hidden = false;
+      reiBtn.setAttribute("aria-expanded", "true");
+      root.querySelector("#cal_reinicio_no").focus();
+    });
+    root.querySelector("#cal_reinicio_no").addEventListener("click", function () { cerrarReinicio(); reiBtn.focus(); });
+    root.querySelector("#cal_reinicio_si").addEventListener("click", function () {
+      empezarDeNuevo(reiTodo.checked);
+      cerrarReinicio();
+      reiBtn.focus();
+    });
+
+    // Borra todo lo del paciente; los datos del profesional y las pautas propias solo si se pide.
+    function empezarDeNuevo(todo) {
+      limpiarHoja();
+      root.querySelector("#cal_paciente").value = "";
+      if (todo) {
+        ["inf_hospital", "inf_farmaceutico", "inf_telefono"].forEach(function (id) { root.querySelector("#" + id).value = ""; });
+        RxData.list().forEach(function (r) { if (/^propia-/.test(r.id)) RxData.remove(r.id); });
+        groups = RxData.byArea();
+        areas = Object.keys(groups);
+        areaEl.innerHTML = '<option value="">Todas las áreas</option>' +
+          areas.map(function (a) { return '<option value="' + esc(a) + '">' + esc(a) + "</option>"; }).join("");
+        cerrarConstructor();
+      }
+      buscarEl.value = "";
+      areaEl.value = "";
+      var prev = selEl.value;
+      refilter();
+      if (!RxData.get(prev) && selEl.options.length) selEl.selectedIndex = 0;
+      state.start = hoy();
+      iniEl.value = state.start;
+      hastaEl.value = HASTA_DEFECTO;
+      resetForRegimen();
+      if (window.RxFarmacos && typeof window.RxFarmacos.reset === "function") window.RxFarmacos.reset();
+      paint(true);
+      goSub("calendario");
+    }
 
     selEl.addEventListener("change", function () { resetForRegimen(); paint(true); });
     function onFilter() {
