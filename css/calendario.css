@@ -1,0 +1,9 @@
+[hidden]{display:none!important}
+
+.tabNav{display:flex;gap:8px;max-width:1180px;margin:18px auto 0;padding:0 16px;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.tabNav [role="tab"]{appearance:none;cursor:pointer;font:inherit;font-weight:600;color:var(--muted);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 20px;box-shadow:var(--shadow-soft)}
+.tabNav [role="tab"]:hover{color:var(--primary)}
+.tabNav [role="tab"][aria-selected="true"]{color:#fff;background:var(--primary);border-color:var(--primary)}
+.tabNav [role="tab"]:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+@media print{.tabNav{display:none!important}#tab-calendario{display:none!important}}

@@ -6,6 +6,7 @@
   <title>RxPlain · Traducción farmacoterapéutica</title>
 
   <link rel="stylesheet" href="css/rxplain.css">
+  <link rel="stylesheet" href="css/calendario.css">
 </head>
 
 <body>
@@ -37,7 +38,12 @@
       </div>
     </header>
 
-    <main class="mainLayout">
+    <nav role="tablist" id="tabs" class="tabNav noPrint" aria-label="Secciones">
+      <button type="button" role="tab" id="tab-btn-infografia" aria-controls="tab-infografia" aria-selected="true">Infografía</button>
+      <button type="button" role="tab" id="tab-btn-calendario" aria-controls="tab-calendario" aria-selected="false" tabindex="-1">Calendario</button>
+    </nav>
+
+    <main class="mainLayout" id="tab-infografia" role="tabpanel" aria-labelledby="tab-btn-infografia">
       <section class="valueStrip" aria-labelledby="value-title">
         <div class="valueLead">
           <h2 id="value-title">RxPlain ayuda al farmacéutico de hospital a transformar información técnica en conocimiento útil para el paciente.</h2>
@@ -163,6 +169,10 @@
       </section>
     </main>
 
+    <section id="tab-calendario" class="mainLayout" role="tabpanel" aria-labelledby="tab-btn-calendario" hidden>
+      <div id="calendarioRoot"></div>
+    </section>
+
     <footer class="siteFooter">
       <p><strong>RxPlain ha sido creada por Ramón Morillo en febrero de 2026</strong> como herramienta de apoyo para la traducción farmacoterapéutica y la educación sanitaria en el ámbito de la Farmacia Hospitalaria.</p>
       <small>Su finalidad es facilitar una comunicación más clara, personalizada y útil con los pacientes. La herramienta no sustituye el juicio clínico del farmacéutico ni la información oficial contenida en la ficha técnica o prospecto.</small>
@@ -175,6 +185,7 @@
     <img id="cimaModalImg" src="" alt="Imagen ampliada" />
   </div>
 
+<script src="js/tabs.js"></script>
 <script src="js/infografia.js"></script>
 </body>
 </html>
