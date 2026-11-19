@@ -66,10 +66,66 @@
     return undefined;
   }
 
+  function clampN(n) {
+    var v = Math.floor(Number(n));
+    if (!isFinite(v) || v < 1) return 1;
+    return v > 60 ? 60 : v;
+  }
+
+  function delayOf(delays, c) {
+    var d = delays ? Number(delays[c]) : 0;
+    return isFinite(d) && d > 0 ? Math.floor(d) : 0;
+  }
+
+  function phaseFor(fases, c) {
+    for (var i = 0; i < fases.length; i++) {
+      var f = fases[i];
+      if (f.desde <= c && (f.hasta === null || f.hasta === undefined || c <= f.hasta)) return f;
+    }
+    return fases[fases.length - 1];
+  }
+
+  function buildCycles(regimen, opts) {
+    var n = clampN(opts.n);
+    var cycles = [];
+    var events = [];
+    var start = opts.start;
+    var end = start;
+    for (var c = 1; c <= n; c++) {
+      var fase = phaseFor(regimen.fases, c);
+      if (c > 1) start = isoAdd(start, cycles[c - 2].len + delayOf(opts.delays, c));
+      cycles.push({ n: c, start: start, len: fase.duracion, fase: fase.etiqueta });
+      end = isoAdd(start, fase.duracion - 1);
+      fase.items.forEach(function (it) {
+        it.dias.forEach(function (day) {
+          if (day > fase.duracion) return;
+          events.push({
+            date: isoAdd(start, day - 1),
+            cycle: c,
+            day: day,
+            farmaco: it.farmaco,
+            abrev: it.abrev,
+            dosis: it.dosis,
+            veces: it.veces_al_dia === undefined || it.veces_al_dia === null ? 1 : it.veces_al_dia,
+            lugar: it.lugar,
+            etiqueta: it.etiqueta || ""
+          });
+        });
+      });
+    }
+    return { cycles: cycles, events: events, end: end };
+  }
+
+  // Despacho por tipo de pauta (los tipos por intervalo se añadirán después).
+  function buildSchedule(regimen, opts) {
+    return buildCycles(regimen, opts);
+  }
+
   return {
     isoAdd: isoAdd,
     isoDow: isoDow,
     isoDiff: isoDiff,
-    holidayName: holidayName
+    holidayName: holidayName,
+    buildSchedule: buildSchedule
   };
 });
