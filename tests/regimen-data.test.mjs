@@ -80,13 +80,16 @@ test("tipo intervalo: valida campos numéricos", () => {
 test("tres esquemas de mieloma: pendientes, y el motor los calcula", () => {
   RxData._reset();
   const files = ["mieloma-drd", "mieloma-vrd-swog", "mieloma-isa-kd"];
-  files.forEach((f) => {
-    const p = require.resolve(`../data/regimens/${f}.js`);
-    delete require.cache[p];
-    globalThis.RxData = RxData;
-    require(p);
-  });
-  delete globalThis.RxData;
+  globalThis.RxData = RxData;
+  try {
+    files.forEach((f) => {
+      const p = require.resolve(`../data/regimens/${f}.js`);
+      delete require.cache[p];
+      require(p);
+    });
+  } finally {
+    delete globalThis.RxData;
+  }
   const list = RxData.list();
   assert.equal(list.length, 3);
   assert.ok(list.every((r) => r.estado === "pendiente" && r.fecha_revision === null && r.area === "Hematología"));
@@ -95,6 +98,11 @@ test("tres esquemas de mieloma: pendientes, y el motor los calcula", () => {
     const s = buildSchedule(r, { start: "2026-11-23", n: r.ciclos_defecto });
     assert.equal(s.events.filter((e) => e.cycle === 1).length, esperado[r.id], r.id);
   });
+  const count = (id, n, c) => buildSchedule(RxData.get(id), { start: "2026-11-23", n })
+    .events.filter((e) => e.cycle === c).length;
+  assert.equal(count("mieloma-drd", 7, 3), 27);
+  assert.equal(count("mieloma-drd", 7, 7), 24);
+  assert.equal(count("mieloma-isa-kd", 2, 2), 14);
   const drd = RxData.get("mieloma-drd");
   assert.equal(drd.fases[0].items[3].dosis, "1800 mg");
   assert.equal(RxData.get("mieloma-isa-kd").fases[0].items[0].dosis, "10 mg/kg");
