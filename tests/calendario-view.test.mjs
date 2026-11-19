@@ -198,3 +198,100 @@ test("con esquemas cargados no hay mensaje de error", async () => {
   assert.equal(dom.window.document.getElementById("cal_esquema").disabled, false);
   dom.window.close();
 });
+
+// --- Selector con buscador y filtro por área ---
+function opcionesIds(d) {
+  return Array.from(d.querySelectorAll("#cal_esquema option")).map((o) => o.value);
+}
+
+function registrarOtraArea(dom) {
+  dom.window.RxData.register({
+    id: "test-reuma", nombre: "Biológico X", area: "Inmunomediadas", linea: "mantenimiento",
+    estado: "validado", fuente: "prueba", fecha_revision: "2026-01-01", ciclos_defecto: 5,
+    ...regimenIntervalo
+  });
+  dom.window.RxCalendar.mount(dom.window.document.getElementById("calendarioRoot"));
+}
+
+test("selector: existen buscador y filtro de área con 'Todas las áreas'", async () => {
+  const dom = await loadPage();
+  const d = dom.window.document;
+  assert.equal(d.getElementById("cal_buscar").type, "search");
+  const area = d.getElementById("cal_area");
+  assert.equal(area.tagName, "SELECT");
+  assert.equal(area.options[0].textContent, "Todas las áreas");
+  assert.equal(area.options[0].value, "");
+  assert.ok(area.options.length >= 2);
+  assert.equal(d.getElementById("cal_sin_resultados"), null);
+  dom.window.close();
+});
+
+test("selector: filtrar por área deja solo esquemas de esa área", async () => {
+  const dom = await loadPage();
+  registrarOtraArea(dom);
+  const d = dom.window.document;
+  setValue(dom, d.getElementById("cal_area"), "Inmunomediadas", "change");
+  assert.deepEqual(opcionesIds(d), ["test-reuma"]);
+  assert.equal(d.getElementById("cal_esquema").value, "test-reuma");
+  setValue(dom, d.getElementById("cal_area"), "", "change");
+  assert.ok(opcionesIds(d).length > 1);
+  assert.deepEqual(dom.errors, []);
+  dom.window.close();
+});
+
+test("selector: buscar 'lenalid' (fármaco) y 'hematologia' (sin acento/mayúsculas)", async () => {
+  const dom = await loadPage();
+  registrarOtraArea(dom);
+  const d = dom.window.document;
+  setValue(dom, d.getElementById("cal_buscar"), "LENALID");
+  const len = opcionesIds(d);
+  assert.ok(len.includes("mieloma-drd"));
+  assert.ok(!len.includes("test-reuma"));
+  setValue(dom, d.getElementById("cal_buscar"), "hematologia");
+  const hem = opcionesIds(d);
+  assert.ok(hem.includes("mieloma-drd"));
+  assert.ok(!hem.includes("test-reuma"));
+  dom.window.close();
+});
+
+test("selector: 0 coincidencias vacía el select, muestra aviso y no hay calendario", async () => {
+  const dom = await loadPage();
+  const d = dom.window.document;
+  setValue(dom, d.getElementById("cal_buscar"), "zzzz-no-existe");
+  assert.equal(d.querySelectorAll("#cal_esquema option").length, 0);
+  const p = d.getElementById("cal_sin_resultados");
+  assert.ok(p);
+  assert.equal(p.getAttribute("role"), "status");
+  assert.equal(p.textContent, "Sin esquemas que coincidan.");
+  assert.equal(d.querySelector("#cal_meses .dia"), null);
+  assert.equal(d.getElementById("cal_avisos").textContent.trim(), "");
+  // al volver a coincidir desaparece el aviso y reaparece el calendario
+  setValue(dom, d.getElementById("cal_buscar"), "");
+  assert.equal(d.getElementById("cal_sin_resultados"), null);
+  assert.ok(d.querySelector("#cal_meses .dia"));
+  assert.deepEqual(dom.errors, []);
+  dom.window.close();
+});
+
+test("selector: se mantiene el esquema seleccionado si sigue coincidiendo; si no, el primero", async () => {
+  const dom = await loadPage();
+  const d = setup(dom, "mieloma-vrd-swog", "2026-11-23", 4);
+  setValue(dom, d.getElementById("cal_buscar"), "swog");
+  assert.equal(d.getElementById("cal_esquema").value, "mieloma-vrd-swog");
+  assert.equal(d.getElementById("cal_ciclos").value, "4"); // no se restablece
+  setValue(dom, d.getElementById("cal_buscar"), "Isa-Kd");
+  assert.equal(d.getElementById("cal_esquema").value, "mieloma-isa-kd");
+  assert.equal(Number(d.getElementById("cal_ciclos").value), dom.window.RxData.get("mieloma-isa-kd").ciclos_defecto);
+  assert.ok(d.querySelector("#cal_meses .dia"));
+  dom.window.close();
+});
+
+test("selector: cada opción muestra el estado como texto", async () => {
+  const dom = await loadPage();
+  registrarOtraArea(dom);
+  const d = dom.window.document;
+  const txt = (id) => d.querySelector(`#cal_esquema option[value="${id}"]`).textContent;
+  assert.match(txt("mieloma-drd"), /⚠ pendiente/);
+  assert.match(txt("test-reuma"), /✔ validado/);
+  dom.window.close();
+});
