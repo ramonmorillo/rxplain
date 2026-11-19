@@ -6,38 +6,186 @@
 .tabNav [role="tab"][aria-selected="true"]{color:#fff;background:var(--primary);border-color:var(--primary)}
 .tabNav [role="tab"]:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 
+/* ===================== Hoja del paciente =====================
+   Mismo HTML para la impresión (#hojaPaciente) y la vista previa (#informe_preview).
+   Las alturas en mm coinciden con las constantes M de js/hoja-paciente.js (paginación determinista).
+   Nada depende de colores de fondo: hospital = borde grueso + "HOSPITAL"; los fondos claros son un extra. */
+@page hojaRx{size:A4 portrait;margin:10mm}
 @media print{
   .tabNav,#tab-calendario,#informe_preview,#hojaPaciente{display:none!important}
+  body[data-printing="calendario"]{background:#fff!important}
   body[data-printing="calendario"] .pageShell > :not(#hojaPaciente){display:none!important}
-  body[data-printing="calendario"] #hojaPaciente{display:block!important}
-  .hoja-proximas{break-inside:avoid}
-  .hoja-tabla tr{break-inside:avoid}
+  body[data-printing="calendario"] #hojaPaciente{display:block!important;margin:0;padding:0}
+}
+.hoja{--acento:#0f6f8c;--acento-osc:#0a4a5e;--acento-claro:#eaf4f7;--tinta:#111;--gris:#4a5458;--linea:#93a3a9;--suave:#d3dcdf;
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;color:var(--tinta);font-size:11pt;line-height:1.3;
+  font-variant-numeric:tabular-nums;-webkit-print-color-adjust:exact;print-color-adjust:exact;text-align:left}
+.hoja *{box-sizing:border-box}
+.hoja p,.hoja h1,.hoja h2,.hoja h3,.hoja dl,.hoja dd,.hoja dt,.hoja ul,.hoja ol,.hoja li{margin:0;padding:0}
+.hoja ul,.hoja ol{list-style:none}
+.hoja-pagina{display:flex;flex-direction:column;min-height:276mm;page:hojaRx;break-after:page;page-break-after:always;background:#fff;position:relative}
+.hoja-pagina:last-child{break-after:auto;page-break-after:auto}
+.hoja-cuerpo{flex:1 1 auto;display:flex;flex-direction:column;margin-bottom:3mm}
+.hoja-ico{fill:none;stroke:var(--acento);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* Aviso de validación: en todas las páginas (borde grueso + texto; el fondo es opcional) */
+.hoja .aviso-pendiente.hoja-banner{height:9mm;margin:0 0 2mm;display:flex;align-items:center;justify-content:center;gap:2mm;
+  border:2.6pt solid #000;border-radius:2.5mm;background:#fff3cd;color:#000;font-weight:900;font-size:11pt;letter-spacing:.03em;text-align:center;padding:0 3mm;white-space:nowrap;overflow:hidden}
+
+/* Cabecera y pie de las páginas interiores */
+.hoja-cab-pag{height:10mm;margin-bottom:3mm;display:flex;align-items:flex-end;justify-content:space-between;gap:6mm;border-bottom:1.6pt solid var(--acento);padding-bottom:1.5mm;white-space:nowrap;overflow:hidden}
+.hoja-cab-hosp{flex:0 0 auto;max-width:62%;font-size:13pt;font-weight:800;color:var(--acento-osc);overflow:hidden;text-overflow:ellipsis}
+.hoja-cab-quien{flex:1 1 auto;min-width:0;text-align:right;font-size:10.5pt;color:var(--gris);overflow:hidden;text-overflow:ellipsis}
+.hoja-pie-pag{flex:none;height:10mm;margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:5mm;border-top:1.6pt solid var(--acento);padding-top:1mm}
+.hoja-pie-msg{font-size:11pt;font-weight:800;color:var(--tinta)}
+.hoja-pie-num{font-size:10pt;color:var(--gris);white-space:nowrap}
+.hoja-abrev{font-size:10pt;color:var(--tinta)}
+.hoja-abrev > span{font-weight:800;color:var(--acento-osc)}
+.hoja-abrev-pag{height:5mm;margin-bottom:1.5mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Portada */
+.hoja-portada-cab{display:flex;align-items:flex-end;justify-content:space-between;gap:6mm;border-bottom:2.2pt solid var(--acento);padding-bottom:2.5mm;margin-bottom:4mm}
+.hoja-kicker{font-size:9.5pt;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--acento)}
+.hoja-hospital{font-size:19pt;font-weight:800;line-height:1.12;margin-top:1.2mm;color:var(--tinta)}
+.hoja-portada-cab .hoja-ico{width:13mm;height:13mm;stroke-width:1.4}
+.hoja-titulo{font-size:26pt;font-weight:800;line-height:1.08;letter-spacing:-.01em;margin:0 0 3.5mm;color:var(--acento-osc)}
+.hoja-datos{display:grid;grid-template-columns:1.35fr 1.15fr 1fr;column-gap:6mm;border:1pt solid var(--linea);border-radius:3.5mm;padding:1mm 5mm}
+.hoja-dato{padding:1.6mm 0;border-bottom:.6pt solid var(--suave)}
+.hoja-dato:not(.hoja-dato-ancho){border-bottom:0}
+.hoja-dato-ancho{grid-column:1/-1}
+.hoja-dato dt{font-size:9pt;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--gris)}
+.hoja-dato dd{font-size:14.5pt;font-weight:700;line-height:1.25;margin-top:.4mm}
+.hoja-linea{font-weight:500;font-size:11.5pt;color:var(--gris);margin-left:1.5mm}
+.hoja-mensaje{display:flex;align-items:center;gap:4.5mm;margin:4mm 0 0;padding:3mm 5mm;border:2.6pt solid var(--acento);border-radius:3.5mm;background:var(--acento-claro)}
+.hoja-mensaje .hoja-ico{width:11mm;height:11mm;stroke-width:2}
+.hoja-mensaje p{font-size:15.5pt;font-weight:800;line-height:1.22;color:var(--tinta)}
+.hoja-indefinida{margin-top:3mm;font-size:10.5pt}
+.hoja-recorte{margin-top:2mm;font-size:11pt;border:2.4pt solid #000;border-radius:2mm;padding:1.5mm 3mm}
+.hoja-h2{font-size:14pt;font-weight:800;color:var(--acento-osc);border-left:1.6mm solid var(--acento);padding-left:2.5mm;line-height:1.15;margin:0 0 3mm;height:auto}
+.hoja-proximas{margin-top:4.5mm}
+.hoja-tarjetas{display:grid;grid-template-columns:1fr 1fr;gap:2.2mm 4mm}
+.hoja-prox{display:flex;gap:3.5mm;align-items:flex-start;border:1pt solid var(--linea);border-radius:3.5mm;padding:1.6mm 3.5mm;break-inside:avoid}
+.hoja-prox-hospital{border:2.6pt solid var(--acento-osc);padding:1.1mm 3mm;background:var(--acento-claro)}
+.hoja-prox-fecha{flex:none;width:21mm;display:flex;flex-direction:column;align-items:center;text-align:center;line-height:1.02;border-right:.8pt solid var(--suave);padding-right:3mm}
+.hoja-prox-dow{font-size:9pt;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--gris)}
+.hoja-prox-dia{font-size:21pt;font-weight:800;letter-spacing:-.02em;color:var(--tinta);margin:.3mm 0 .2mm}
+.hoja-prox-mes{font-size:10pt;font-weight:700;color:var(--tinta)}
+.hoja-prox-info{min-width:0;flex:1}
+.hoja-prox-donde{font-size:10.5pt;font-weight:900;letter-spacing:.08em;color:var(--acento-osc)}
+.hoja-prox-meds{margin-top:.6mm}
+.hoja-prox-med{font-size:11pt;line-height:1.25;margin-top:.5mm}
+.hoja-prox-lugar{font-size:10pt;font-weight:700;color:var(--gris)}
+.hoja-portada-pie{margin-top:auto;padding-top:4mm;display:flex;flex-direction:column;gap:3.5mm}
+.hoja-leyenda{border:1pt solid var(--linea);border-radius:3.5mm;padding:3mm 4.5mm}
+.hoja-leyenda .hoja-h2{font-size:12.5pt;margin-bottom:1.5mm}
+.hoja-ley-lista{display:grid;grid-template-columns:1fr 1fr;column-gap:6mm}
+.hoja-ley-lista li{display:grid;grid-template-columns:23mm 1fr;gap:3mm;align-items:center;font-size:10.5pt;line-height:1.2;padding:.7mm 0}
+.hoja-ley-muestra{font-size:10pt;font-weight:700;text-align:center;border:.7pt solid var(--linea);border-radius:1.6mm;padding:.8mm 1mm;white-space:nowrap}
+.hoja-ley-muestra em,.hoja-med em{font-style:normal;font-weight:800}
+.hoja-ley-hosp{border:2.4pt solid var(--acento-osc);color:var(--acento-osc);font-weight:900;letter-spacing:.05em}
+.hoja-ley-ciclo{border:1pt solid var(--tinta)}
+.hoja-leyenda .hoja-abrev{margin-top:2mm;padding-top:2mm;border-top:.6pt solid var(--suave)}
+.hoja-contacto{display:flex;align-items:center;gap:4mm;border:2.2pt solid var(--acento);border-radius:3.5mm;padding:3mm 4.5mm}
+.hoja-contacto > div{flex:1;min-width:0}
+.hoja-contacto .hoja-ico{width:9mm;height:9mm;stroke-width:1.8}
+.hoja-contacto-titulo{font-size:12.5pt;font-weight:800;color:var(--acento-osc);line-height:1.2}
+.hoja-contacto dl{display:grid;grid-template-columns:repeat(var(--n,3),auto);justify-content:space-between;gap:1mm 7mm;margin-top:1.2mm}
+.hoja-contacto-fila{min-width:0}
+.hoja-contacto .hoja-tel{white-space:nowrap}
+.hoja-contacto-fila{min-width:0}
+.hoja-contacto dt{font-size:9pt;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--gris)}
+.hoja-contacto dd{font-size:13pt;font-weight:700;line-height:1.2;overflow-wrap:anywhere}
+.hoja-contacto .hoja-tel dd{font-size:16pt;line-height:1.1;font-weight:800;letter-spacing:.02em}
+
+/* Calendario mensual */
+.hoja-meses{display:flex;flex-direction:column;gap:5mm}
+.hoja-mes{break-inside:avoid;page-break-inside:avoid}
+.hoja-mes-titulo{height:9mm;display:flex;align-items:flex-end;gap:2mm;padding-bottom:1.6mm;font-size:16pt;font-weight:800;line-height:1;color:var(--acento-osc)}
+.hoja-mes-titulo span{font-weight:500;color:var(--gris)}
+.hoja-semana{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:1.1mm;height:var(--h,auto);margin-top:1.1mm}
+.hoja-semana-cab{height:6mm;margin-top:0;align-items:end}
+.hoja-cab{font-size:10pt;font-weight:800;letter-spacing:.06em;text-transform:uppercase;text-align:center;color:var(--tinta);border-bottom:1.2pt solid var(--acento);padding-bottom:.8mm}
+.hoja-cab-finde{color:var(--gris)}
+.hoja-dia{display:flex;flex-direction:column;min-width:0;border:.6pt solid var(--linea);border-radius:1.8mm;padding:.9mm 1.2mm;font-size:10pt;line-height:1.15}
+.hoja-dia-top{display:flex;align-items:center;justify-content:space-between;gap:1mm;height:5.4mm;flex:none}
+.hoja-num{font-size:13pt;font-weight:800;line-height:1}
+.hoja-finde .hoja-num{color:var(--gris)}
+.hoja-fuera{border-style:dashed;border-color:var(--suave)}
+.hoja-fuera .hoja-num{color:#8a959a;font-weight:600}
+.hoja-dia-hospital{border:2.4pt solid var(--acento-osc);padding:.35mm 1mm;background:var(--acento-claro)}
+.hoja-ciclo{font-size:10pt;font-weight:800;line-height:1.1;border:1pt solid var(--tinta);border-radius:1.2mm;padding:0 .8mm;white-space:nowrap}
+.hoja-hosp{display:block;font-weight:900;letter-spacing:.05em;color:var(--acento-osc)}
+.hoja-alerta{font-weight:900;color:#000}
+.hoja-med{display:block;overflow-wrap:anywhere}
+.hoja-med-hosp{font-weight:700}
+.hoja-fest{display:block;font-style:italic;color:var(--gris)}
+.hoja-vacio{min-width:0}
+
+/* Resumen final: visitas y medicación en casa */
+.hoja-resumen{display:flex;flex-direction:column;gap:5mm}
+.hoja-meses + .hoja-resumen{margin-top:5mm}
+.hoja-tabla{width:100%;border-collapse:separate;border-spacing:0;font-size:12pt;line-height:1.2;border:1pt solid var(--linea);border-radius:2.5mm}
+.hoja-tabla th{height:8mm;padding:1mm 2.5mm;font-size:12pt;font-weight:800;color:var(--acento-osc);text-align:left;vertical-align:bottom;border-bottom:1.4pt solid var(--acento)}
+.hoja-tabla td{padding:1.2mm 2.5mm;vertical-align:top;border-bottom:.6pt solid var(--suave)}
+.hoja-tabla tbody tr:last-child td{border-bottom:0}
+.hoja-tabla tr{break-inside:avoid;page-break-inside:avoid}
+.hoja-visitas-cols{display:grid;grid-template-columns:1fr 1fr;gap:5mm;align-items:start}
+.hoja-td-fecha{white-space:nowrap;font-weight:700;width:1%}
+.hoja-tabla-casa td:first-child{width:30%}
+.hoja-tabla-casa th,.hoja-tabla-casa td:nth-child(2),.hoja-tabla-casa td:nth-child(3),.hoja-tabla-casa td:nth-child(5){white-space:nowrap}
+.hoja-nota-dias{margin-top:2.5mm;font-size:12pt}
+.hoja-descargo{font-size:10.5pt;color:var(--gris)}
+.hoja-vacia{font-size:12pt;padding:1mm 0}
+.hoja-visitas-med{font-size:12pt;margin:0 0 2.5mm}
+.hoja-fechas{display:grid;grid-auto-flow:column;grid-template-rows:repeat(var(--filas),7.6mm);grid-template-columns:repeat(4,1fr);column-gap:3mm;border:1pt solid var(--linea);border-radius:2.5mm;padding:0 3mm}
+.hoja-fechas li{font-size:12pt;font-weight:700;display:flex;align-items:center;border-bottom:.6pt solid var(--suave);white-space:nowrap}
+
+/* Vista previa en pantalla: hojas A4 sobre fondo gris */
+.informe-preview{margin-top:14px;padding:22px;background:#e6ecef;border:1px solid var(--border);border-radius:var(--radius-sm);overflow-x:auto}
+.informe-preview > .aviso{background:#fff}
+.informe-preview .hoja-pagina{width:210mm;min-height:297mm;padding:10mm;margin:0 auto 22px;box-shadow:0 2px 12px rgba(15,40,52,.18);border-radius:2px}
+.informe-preview .hoja-pagina:last-child{margin-bottom:0}
+@media (max-width:720px){
+  .informe-preview{padding:8px;min-width:0;max-width:100%;flex:1 1 100%;width:100%}
+  .informe-preview .hoja-tabla-casa{display:block;overflow-x:auto}
+  .informe-preview .hoja,.informe-preview .hoja *{min-width:0}
+  .informe-preview .hoja{font-size:13px}
+  .informe-preview .hoja-pagina{width:auto;min-height:0;padding:14px 12px;margin-bottom:12px}
+  .informe-preview .hoja .aviso-pendiente.hoja-banner{height:auto;white-space:normal;font-size:12px;padding:6px 8px}
+  .informe-preview .hoja-cab-pag{height:auto;flex-wrap:wrap;white-space:normal;gap:2px 10px}
+  .informe-preview .hoja-abrev-pag{height:auto;white-space:normal}
+  .informe-preview .hoja-hospital{font-size:20px}
+  .informe-preview .hoja-titulo{font-size:26px}
+  .informe-preview .hoja-datos{grid-template-columns:1fr;padding:2px 12px}
+  .informe-preview .hoja-dato:nth-last-child(2){border-bottom:.6pt solid var(--suave)}
+  .informe-preview .hoja-mensaje p{font-size:17px}
+  .informe-preview .hoja-tarjetas{grid-template-columns:1fr}
+  .informe-preview .hoja-ley-lista{grid-template-columns:1fr}
+  .informe-preview .hoja-fechas{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-auto-flow:row;grid-template-rows:none;column-gap:8px;padding:0 8px}
+  .informe-preview .hoja-fechas li{white-space:normal;font-size:12px}
+  .informe-preview .hoja-tabla-casa th,.informe-preview .hoja-tabla-casa td{white-space:normal!important;padding:4px}
+  .informe-preview .hoja-fechas li{min-height:28px}
+  .informe-preview .hoja-datos{grid-template-columns:1fr}
+  .informe-preview .hoja-portada-pie{flex-direction:column}
+  .informe-preview .hoja-semana{height:auto!important;min-height:48px;gap:2px;margin-top:2px}
+  .informe-preview .hoja-semana-cab{min-height:0}
+  .informe-preview .hoja-dia{font-size:9px;padding:2px;border-radius:4px}
+  .informe-preview .hoja-dia-hospital{padding:1px}
+  .informe-preview .hoja-dia-top{height:auto;flex-wrap:wrap}
+  .informe-preview .hoja-num{font-size:12px}
+  .informe-preview .hoja-ciclo{font-size:8px}
+  .informe-preview .hoja-hosp{font-size:7px;letter-spacing:-.02em;overflow:hidden}
+  .informe-preview .hoja-cab{font-size:9px;letter-spacing:0}
+  .informe-preview .hoja-visitas-cols{grid-template-columns:1fr}
+  .informe-preview .hoja-casa{overflow-x:auto}
+  .informe-preview .hoja-contacto dl{grid-template-columns:1fr}
+  .informe-preview .hoja-contacto{align-items:flex-start}
+  .informe-preview .hoja-tabla{font-size:13px}
+  .informe-preview .hoja-pie-pag{height:auto;flex-wrap:wrap;padding-top:6px}
 }
 
-/* Hoja del paciente (solo visible al imprimir). Blanco y negro, tipografía del sistema. */
-#hojaPaciente{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#000;background:#fff;font-size:14pt;line-height:1.35}
-#hojaPaciente h1{font-size:22pt;margin:0 0 6px}
-#hojaPaciente h2{font-size:16pt;margin:16px 0 6px;break-after:avoid}
-#hojaPaciente .aviso-pendiente{border:3px solid #000;padding:8px;font-weight:800;text-align:center;background:#fff}
-#hojaPaciente .aviso-pendiente-mes{border:3px solid #000;padding:4px 6px;margin:0 0 4px;font-weight:800;text-align:center;font-size:11pt;background:#fff}
-.hoja-nota-dias{margin:6px 0 0;font-size:13pt}
-.hoja-tabla{width:100%;border-collapse:collapse;font-size:13pt}
-.hoja-tabla th,.hoja-tabla td{border:1px solid #000;padding:4px 6px;text-align:left;vertical-align:top}
-.hoja-mes{break-inside:avoid;page-break-inside:avoid;margin-top:12px}
-.hoja-mes h3{font-size:15pt;margin:0 0 4px}
-.hoja-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:0;border-left:1px solid #000;border-top:1px solid #000}
-.hoja-cab{text-align:center;font-weight:800;border-right:1px solid #000;border-bottom:1px solid #000}
-.hoja-vacio,.hoja-dia{border-right:1px solid #000;border-bottom:1px solid #000;min-height:22mm;padding:2px 3px;font-size:9pt;overflow:hidden}
-.hoja-dia-hospital{border:4px solid #000}
-.hoja-num{display:block;font-size:12pt}
-.hoja-hosp{display:block;font-weight:900;font-size:10pt}
-.hoja-med{display:block}
-.hoja-ciclo{display:block;font-weight:800;text-decoration:underline}
-.hoja-contacto{margin-top:16px;border-top:2px solid #000;break-inside:avoid}
-.hoja-contacto p{margin:2px 0}
-
 /* Vista del calendario */
-#calendarioRoot{max-width:1180px;margin:18px auto;padding:0 16px;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+#calendarioRoot{min-width:0;width:100%;box-sizing:border-box;max-width:1212px;margin:18px auto;padding:0 16px;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 .cal-form{display:flex;flex-wrap:wrap;gap:12px 18px;align-items:end;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px}
 .cal-form label{display:flex;flex-direction:column;gap:4px;font-weight:600;font-size:.9rem}
 .cal-form input,.cal-form select{font:inherit;padding:6px 8px;border:1px solid var(--border);border-radius:6px}
@@ -98,28 +246,17 @@
 .far-texto{white-space:pre-wrap;word-break:break-word;font:inherit;max-height:340px;overflow:auto;padding:8px;border:1px solid var(--border);border-radius:6px;background:#fff}
 .far-texto:empty{display:none}
 
-/* Informe: bloque de próximas administraciones y vista previa en pantalla */
-.hoja-prox-hospital td{border:4px solid #000;font-weight:700}
-.hoja-tabla-prox td,.hoja-tabla-prox th{font-size:14pt}
-.hoja-pie{margin-top:14px;padding-top:6px;border-top:1px solid #000;font-size:12pt}
-.informe-preview{margin-top:14px;padding:16px;background:#fff;color:#000;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;line-height:1.35}
-.informe-preview h1{font-size:1.5rem;margin:0 0 6px}
-.informe-preview h2{font-size:1.15rem;margin:14px 0 6px}
-.informe-preview .aviso-pendiente{border:3px solid #000;padding:8px;font-weight:800;text-align:center;background:#fff}
-.informe-preview .aviso-pendiente-mes{border:3px solid #000;padding:4px 6px;margin:0 0 4px;font-weight:800;text-align:center;font-size:.8rem;background:#fff}
-.informe-preview .hoja-tabla{width:100%;border-collapse:collapse}
-.informe-preview .hoja-tabla th,.informe-preview .hoja-tabla td{border:1px solid #000;padding:4px 6px;text-align:left;vertical-align:top}
-.informe-preview .hoja-mes{margin-top:12px}
-.informe-preview .hoja-grid{display:grid;grid-template-columns:repeat(7,1fr);border-left:1px solid #000;border-top:1px solid #000}
-.informe-preview .hoja-cab{text-align:center;font-weight:800;border-right:1px solid #000;border-bottom:1px solid #000}
-.informe-preview .hoja-vacio,.informe-preview .hoja-dia{border-right:1px solid #000;border-bottom:1px solid #000;min-height:60px;padding:2px 3px;font-size:.7rem;overflow:hidden}
-.informe-preview .hoja-dia-hospital{border:3px solid #000}
-.informe-preview .hoja-num{display:block}
-.informe-preview .hoja-hosp{display:block;font-weight:900}
-.informe-preview .hoja-med{display:block}
-.informe-preview .hoja-ciclo{display:block;font-weight:800;text-decoration:underline}
-.informe-preview .hoja-contacto{margin-top:14px;border-top:2px solid #000}
+/* Pauta indefinida y contacto del informe */
+.cal-form label.cal-check,.cb-indef{flex-direction:row;align-items:center;font-weight:600}
+.cal-form label.cal-check input,.cb-indef input{padding:0}
+.aviso-recorte{border:3px solid #000;font-weight:600}
 
-/* Banner de validación en el thead: se repite en cada página impresa (Chrome/Edge). */
-.hoja-tabla thead{display:table-header-group}
-.hoja-tabla th.aviso-pendiente-mes{border:3px solid #000;text-align:center;font-weight:800;background:#fff;font-size:11pt}
+/* Empezar de nuevo (confirmación en línea) */
+.cal-reinicio-barra{display:flex;justify-content:flex-end;margin:-6px 0 12px}
+.cal-reinicio{margin:0 0 14px;padding:12px 14px;border:2px solid #c0392b;border-radius:var(--radius-sm);background:#fff}
+.cal-reinicio p{margin:0 0 8px}
+.cal-reinicio label.cal-check{display:flex;flex-direction:row;justify-content:flex-start;gap:8px;align-items:center;font-weight:600;margin:0 0 10px;text-align:left}
+.cal-reinicio label.cal-check input{width:auto;margin:0;flex:none}
+.cal-reinicio-botones{display:flex;flex-wrap:wrap;gap:8px}
+#cal_reinicio_si{background:#c0392b;border-color:#c0392b;color:#fff}
+@media print{.cal-reinicio,.cal-reinicio-barra{display:none!important}}

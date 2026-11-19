@@ -7,6 +7,7 @@
   var AREAS = ["Hematología", "Oncología", "Inmunomediadas"];
   var ESTADOS = ["validado", "pendiente"];
   var LUGARES = ["hospital", "casa", "casa_inyeccion"];
+  var DURACIONES = ["limitada", "indefinida"];
   var registry = [];
 
   function fail(field, msg) {
@@ -48,6 +49,9 @@
       fail("fecha_revision", "debe tener formato YYYY-MM-DD");
     }
     if (!isNum(r.ciclos_defecto) || r.ciclos_defecto < 1) fail("ciclos_defecto", "debe ser un número >= 1");
+    if (r.duracion !== undefined && DURACIONES.indexOf(r.duracion) === -1) {
+      fail("duracion", "debe ser uno de " + DURACIONES.join(", ") + " (recibido: " + r.duracion + ")");
+    }
     ["notas", "supuestos"].forEach(function (k) {
       if (r[k] !== undefined && !Array.isArray(r[k])) fail(k, "debe ser un array de textos");
     });
@@ -107,9 +111,16 @@
     return out;
   }
 
+  // Quita un esquema del registro (p. ej. una pauta propia al empezar de nuevo). Devuelve true si existía.
+  function remove(id) {
+    var n = registry.length;
+    registry = registry.filter(function (r) { return r.id !== id; });
+    return registry.length !== n;
+  }
+
   function _reset() {
     registry = [];
   }
 
-  return { register: register, list: list, get: get, byArea: byArea, _reset: _reset };
+  return { register: register, list: list, get: get, byArea: byArea, remove: remove, _reset: _reset };
 });
