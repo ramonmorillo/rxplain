@@ -68,6 +68,7 @@
 
   function clampN(n) {
     var v = Math.floor(Number(n));
+    if (v === Infinity) return 60;
     if (!isFinite(v) || v < 1) return 1;
     return v > 60 ? 60 : v;
   }
@@ -86,6 +87,9 @@
   }
 
   function buildCycles(regimen, opts) {
+    if (!regimen || !Array.isArray(regimen.fases) || !regimen.fases.length) {
+      throw new Error("La pauta por ciclos necesita al menos una entrada en 'fases'.");
+    }
     var n = clampN(opts.n);
     var cycles = [];
     var events = [];
@@ -116,8 +120,45 @@
     return { cycles: cycles, events: events, end: end };
   }
 
-  // Despacho por tipo de pauta (los tipos por intervalo se añadirán después).
+  // Pautas por intervalo: dosis en desplazamientos_dias, luego
+  // primer_mantenimiento_dia y +cada_dias; opts.n sustituye a dosis_totales.
+  // En los eventos, cycle = nº de dosis y day = día de la pauta (inicio = 1).
+  function buildIntervals(regimen, opts) {
+    if (!regimen || !Array.isArray(regimen.items) || !regimen.items.length) {
+      throw new Error("La pauta por intervalo necesita al menos una entrada en 'items'.");
+    }
+    var total = clampN(opts.n);
+    var events = [];
+    var end = opts.start;
+    regimen.items.forEach(function (it) {
+      var offsets = (it.desplazamientos_dias || []).slice();
+      var k = 0;
+      while (offsets.length < total) {
+        offsets.push(it.primer_mantenimiento_dia + k * it.cada_dias);
+        k++;
+      }
+      offsets.slice(0, total).forEach(function (off, i) {
+        var date = isoAdd(opts.start, off);
+        if (date > end) end = date;
+        events.push({
+          date: date,
+          cycle: i + 1,
+          day: off + 1,
+          farmaco: it.farmaco,
+          abrev: it.abrev,
+          dosis: it.dosis,
+          veces: it.veces_al_dia === undefined || it.veces_al_dia === null ? 1 : it.veces_al_dia,
+          lugar: it.lugar,
+          etiqueta: it.etiqueta || ""
+        });
+      });
+    });
+    events.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+    return { cycles: [], events: events, end: end };
+  }
+
   function buildSchedule(regimen, opts) {
+    if (regimen && regimen.tipo === "intervalo") return buildIntervals(regimen, opts);
     return buildCycles(regimen, opts);
   }
 
