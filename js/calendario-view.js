@@ -194,7 +194,6 @@
       var b = build();
       if (!b) { mesesEl.innerHTML = ""; avisosEl.innerHTML = ""; return; }
       if (!b.schedule) {
-        retEl.innerHTML = "";
         avisosEl.innerHTML = '<p class="aviso">Indique una fecha de inicio válida.</p>';
         mesesEl.innerHTML = "";
         return;

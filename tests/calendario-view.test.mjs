@@ -127,3 +127,19 @@ test("mount funciona con otra raíz", async () => {
   assert.deepEqual(dom.errors, []);
   dom.window.close();
 });
+
+test("un retraso sobrevive a vaciar y restaurar la fecha de inicio", async () => {
+  const dom = await loadPage();
+  const d = setup(dom, "mieloma-drd", "2026-11-23", 3);
+  setValue(dom, d.querySelector('[data-delay="2"]'), "5");
+  setValue(dom, d.getElementById("cal_inicio"), "");
+  assert.equal(d.querySelector("#cal_meses .dia"), null);
+  assert.match(d.getElementById("cal_avisos").textContent, /fecha de inicio/);
+  setValue(dom, d.getElementById("cal_inicio"), "2026-11-23", "change");
+  const inp = d.querySelector('[data-delay="2"]');
+  assert.ok(inp);
+  assert.equal(inp.value, "5");
+  assert.equal(d.querySelector('[data-ciclo-inicio="2"]').getAttribute("data-date"), "2026-12-26");
+  assert.deepEqual(dom.errors, []);
+  dom.window.close();
+});
