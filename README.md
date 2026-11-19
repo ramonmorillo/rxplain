@@ -59,6 +59,18 @@ Pasos:
 3. Añadir pruebas si el esquema introduce un caso nuevo y ejecutar `npm test`.
 4. Dejarlo en `estado: "pendiente"` hasta que un farmacéutico lo valide; solo entonces pasar a `validado` con `fecha_revision`.
 
+## Pautas propias
+
+En la pestaña Calendario, el botón **Crear pauta propia** abre un formulario para definir una pauta sin editar código:
+
+- Elija nombre, área y tipo: *por ciclos* (p. ej. "días 1–21 de 28") o *por intervalo* (dosis sueltas, p. ej. "0, 14, 28 y luego cada 56 días").
+- **Añadir fármaco** crea una fila por fármaco. Los días se escriben como lista o rango: `1-21`, `1,8,15`, `1-3, 8`.
+- Hay dos ejemplos precargables: "Biológico cada N semanas" y "Oral días 1–21 de 28".
+- La pauta se registra solo en memoria con `estado: "pendiente"` (fuente "Pauta definida por el usuario (sin validar)"); se selecciona y se pinta al crearla, y la hoja impresa lleva el aviso de pendiente. No se guarda al cerrar la página.
+- La dosis es texto libre: la herramienta no calcula dosis.
+
+La lógica está en `js/constructor-pauta.js` (`RxBuilder.buildRegimen`) y sus pruebas en `tests/constructor-pauta.test.mjs`.
+
 ## Pruebas
 
 Requiere Node >= 22 (campo `engines` de `package.json`). `jsdom` es dependencia solo de desarrollo (no se carga en la aplicación).

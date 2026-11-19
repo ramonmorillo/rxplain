@@ -64,3 +64,15 @@
 .cal-selector{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:flex-end}
 .cal-selector input[type="search"],.cal-selector select{max-width:100%}
 #cal_sin_resultados{flex-basis:100%;margin:0;font-weight:600;color:var(--muted)}
+
+/* Constructor de pautas propias */
+.cal-constructor{margin:14px 0;padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm)}
+.cal-constructor h2{margin:0 0 6px;font-size:1.1rem}
+.cb-ayuda{margin:0 0 8px;color:var(--muted)}
+.cb-campos,.cb-item{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:end;margin-bottom:10px}
+.cb-item{padding:10px;border:1px dashed var(--border);border-radius:var(--radius-sm)}
+.cal-constructor label{display:flex;flex-direction:column;gap:4px;font-weight:600;font-size:.9rem}
+.cal-constructor input,.cal-constructor select{font:inherit;padding:6px 8px;border:1px solid var(--border);border-radius:6px}
+.cb-error:empty{display:none}
+.cb-error{background:#fde8e8;border-color:#c0392b}
+.btn-sec{background:var(--surface);color:var(--primary);border:1px solid var(--primary)}

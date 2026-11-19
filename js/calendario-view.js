@@ -145,6 +145,7 @@
     }
     var groups = RxData.byArea();
     var areas = Object.keys(groups);
+    var canBuild = !!window.RxBuilder;
     var state = { id: null, start: todayIso(), n: 1, delays: {} };
 
     root.innerHTML =
@@ -158,8 +159,10 @@
       '<label>Fecha de inicio <input type="date" id="cal_inicio"></label> ' +
       '<label><span id="cal_ciclos_lbl">Ciclos</span> <input id="cal_ciclos" type="number" inputmode="numeric" min="1" max="60"></label>' +
       '<label>Identificador del paciente (opcional, no se guarda) <input id="cal_paciente" type="text" autocomplete="off"></label> ' +
-      '<button type="button" id="cal_imprimir" class="btn">Imprimir hoja del paciente</button>' +
+      '<button type="button" id="cal_imprimir" class="btn">Imprimir hoja del paciente</button> ' +
+      (canBuild ? '<button type="button" id="cal_nueva" class="btn btn-sec" aria-expanded="false" aria-controls="cal_constructor">Crear pauta propia</button>' : "") +
       '<div id="cal_retrasos" class="cal-retrasos"></div></form>' +
+      '<section id="cal_constructor" class="cal-constructor" hidden aria-label="Crear pauta propia"></section>' +
       '<div id="cal_avisos" class="cal-avisos"></div>' +
       '<div id="cal_meses" class="cal-meses"></div>';
 
@@ -270,7 +273,11 @@
 
     function imprimir() {
       var b = build();
-      if (!b || !b.schedule) {
+      if (!b) {
+        avisosEl.innerHTML = '<p class="aviso">Seleccione un esquema.</p>';
+        return;
+      }
+      if (!b.schedule) {
         avisosEl.innerHTML = '<p class="aviso">Indique una fecha de inicio válida.</p>';
         return;
       }
@@ -322,6 +329,166 @@
       state.delays[t.getAttribute("data-delay")] = t.value;
       paint(false);
     });
+
+    // ---- Constructor de pautas propias ----
+    var consEl = root.querySelector("#cal_constructor");
+    var consBtn = root.querySelector("#cal_nueva");
+    var B = window.RxBuilder;
+
+    function opt(v, t, sel) { return '<option value="' + esc(v) + '"' + (sel ? " selected" : "") + ">" + esc(t) + "</option>"; }
+
+    function itemRow() {
+      var lug = [["hospital", "Hospital"], ["casa", "Casa (oral)"], ["casa_inyeccion", "Casa (inyección)"]];
+      return '<div class="cb-item">' +
+        '<label>Fármaco <input type="text" data-f="farmaco" autocomplete="off"></label>' +
+        '<label>Abreviatura (opcional) <input type="text" data-f="abrev" maxlength="8" autocomplete="off"></label>' +
+        '<label>Dosis (texto libre) <input type="text" data-f="dosis" autocomplete="off" placeholder="p. ej. 40 mg"></label>' +
+        '<label>Lugar <select data-f="lugar">' + lug.map(function (l) { return opt(l[0], l[1]); }).join("") + "</select></label>" +
+        '<label class="cb-ciclos">Días del ciclo <input type="text" data-f="dias" autocomplete="off" placeholder="1-21 o 1,8,15"></label>' +
+        '<label class="cb-intervalo">Dosis iniciales: días desde el inicio <input type="text" data-f="desplazamientos_dias" autocomplete="off" placeholder="0,14,28"></label>' +
+        '<label class="cb-intervalo">Primer mantenimiento (día) <input type="text" data-f="primer_mantenimiento_dia" inputmode="numeric" placeholder="56"></label>' +
+        '<label class="cb-intervalo">Repetir cada (días) <input type="text" data-f="cada_dias" inputmode="numeric" placeholder="56"></label>' +
+        '<button type="button" class="btn btn-sec" data-quitar>Quitar fármaco</button></div>';
+    }
+
+    function consTipo() { return consEl.querySelector("#cb_tipo").value; }
+
+    function applyTipo() {
+      var t = consTipo();
+      consEl.querySelector("#cb_ciclo_wrap").hidden = t !== "ciclos";
+      consEl.querySelector("#cb_n_lbl").textContent = t === "intervalo" ? "Número de dosis por defecto" : "Número de ciclos por defecto";
+      Array.prototype.forEach.call(consEl.querySelectorAll(".cb-ciclos"), function (e) { e.hidden = t !== "ciclos"; });
+      Array.prototype.forEach.call(consEl.querySelectorAll(".cb-intervalo"), function (e) { e.hidden = t !== "intervalo"; });
+    }
+
+    function addRow() {
+      var tmp = document.createElement("div");
+      tmp.innerHTML = itemRow();
+      consEl.querySelector("#cb_items").appendChild(tmp.firstChild);
+      applyTipo();
+    }
+
+    function setErr(msg) { consEl.querySelector("#cb_error").textContent = msg || ""; }
+
+    function renderConstructor() {
+      consEl.innerHTML =
+        "<h2>Crear pauta propia</h2>" +
+        '<p class="cb-ayuda">Defina una pauta que no esté en la lista. Quedará marcada como <strong>pendiente de validación</strong>, ' +
+        "no se guarda al cerrar la página y no calcula dosis: la dosis es solo un texto.</p>" +
+        '<p class="cb-ejemplos">Ejemplos: <button type="button" class="btn btn-sec" id="cal_ej_bio">Biológico cada N semanas</button> ' +
+        '<button type="button" class="btn btn-sec" id="cal_ej_oral">Oral días 1–21 de 28</button></p>' +
+        '<div class="cb-campos">' +
+        '<label>Nombre de la pauta <input type="text" id="cb_nombre" autocomplete="off"></label>' +
+        '<label>Área <select id="cb_area">' + B.AREAS.map(function (a) { return opt(a, a); }).join("") + "</select></label>" +
+        '<label>Tipo de pauta <select id="cb_tipo">' + opt("ciclos", "Por ciclos (se repite cada N días)") +
+        opt("intervalo", "Por intervalo (dosis sueltas cada N días)") + "</select></label>" +
+        '<label><span id="cb_n_lbl">Número de ciclos por defecto</span> <input type="text" id="cb_n" inputmode="numeric" value="6"></label>' +
+        '<label id="cb_ciclo_wrap">Duración del ciclo (días) <input type="text" id="cb_ciclo" inputmode="numeric" value="28"></label></div>' +
+        '<div id="cb_items"></div>' +
+        '<p><button type="button" class="btn btn-sec" id="cb_add">Añadir fármaco</button></p>' +
+        '<p id="cb_error" class="aviso cb-error" role="alert"></p>' +
+        '<p><button type="button" class="btn" id="cb_crear">Crear pauta</button> ' +
+        '<button type="button" class="btn btn-sec" id="cb_cancelar">Cancelar</button></p>';
+      addRow();
+      applyTipo();
+    }
+
+    function fillForm(f) {
+      consEl.querySelector("#cb_nombre").value = f.nombre;
+      consEl.querySelector("#cb_area").value = f.area;
+      consEl.querySelector("#cb_tipo").value = f.tipo;
+      consEl.querySelector("#cb_n").value = String(f.ciclos_defecto);
+      if (f.ciclo_dias) consEl.querySelector("#cb_ciclo").value = String(f.ciclo_dias);
+      consEl.querySelector("#cb_items").innerHTML = "";
+      f.items.forEach(function (it) {
+        addRow();
+        var row = consEl.querySelector("#cb_items").lastChild;
+        Object.keys(it).forEach(function (k) {
+          var el = row.querySelector('[data-f="' + k + '"]');
+          if (el) el.value = it[k];
+        });
+      });
+      applyTipo();
+      setErr("");
+    }
+
+    function readForm() {
+      var f = {
+        nombre: consEl.querySelector("#cb_nombre").value,
+        area: consEl.querySelector("#cb_area").value,
+        tipo: consTipo(),
+        ciclos_defecto: consEl.querySelector("#cb_n").value,
+        ciclo_dias: consEl.querySelector("#cb_ciclo").value,
+        items: []
+      };
+      Array.prototype.forEach.call(consEl.querySelectorAll(".cb-item"), function (row) {
+        var it = {};
+        Array.prototype.forEach.call(row.querySelectorAll("[data-f]"), function (el) { it[el.getAttribute("data-f")] = el.value; });
+        f.items.push(it);
+      });
+      return f;
+    }
+
+    function cerrarConstructor() {
+      consEl.hidden = true;
+      if (consBtn) consBtn.setAttribute("aria-expanded", "false");
+    }
+
+    function crearPauta() {
+      var r;
+      try {
+        r = B.buildRegimen(B.formFromText(readForm()));
+      } catch (err) {
+        setErr(err && err.message ? err.message : "No se ha podido crear la pauta.");
+        return;
+      }
+      groups = RxData.byArea();
+      areas = Object.keys(groups);
+      areaEl.innerHTML = '<option value="">Todas las áreas</option>' +
+        areas.map(function (a) { return '<option value="' + esc(a) + '">' + esc(a) + "</option>"; }).join("");
+      buscarEl.value = "";
+      areaEl.value = "";
+      refilter();
+      selEl.value = r.id;
+      resetForRegimen();
+      paint(true);
+      cerrarConstructor();
+      var host = root.querySelector("#cal_avisos");
+      if (host && host.scrollIntoView) { try { host.scrollIntoView(); } catch (e) { /* jsdom */ } }
+    }
+
+    if (consBtn) {
+      consBtn.addEventListener("click", function () {
+        if (consEl.hidden) {
+          renderConstructor();
+          consEl.hidden = false;
+          consBtn.setAttribute("aria-expanded", "true");
+          var first = consEl.querySelector("#cb_nombre");
+          if (first && first.focus) first.focus();
+        } else {
+          cerrarConstructor();
+        }
+      });
+      consEl.addEventListener("click", function (e) {
+        var t = e.target;
+        if (!t || !t.closest) return;
+        var btn = t.closest("button");
+        if (!btn) return;
+        if (btn.id === "cb_add") addRow();
+        else if (btn.id === "cb_crear") crearPauta();
+        else if (btn.id === "cb_cancelar") cerrarConstructor();
+        else if (btn.id === "cal_ej_bio") fillForm(B.EJEMPLOS.biologico());
+        else if (btn.id === "cal_ej_oral") fillForm(B.EJEMPLOS.oral21de28());
+        else if (btn.hasAttribute("data-quitar")) {
+          var rows = consEl.querySelectorAll(".cb-item");
+          if (rows.length > 1) btn.closest(".cb-item").remove();
+          else setErr("Debe quedar al menos un fármaco.");
+        }
+      });
+      consEl.addEventListener("change", function (e) {
+        if (e.target && e.target.id === "cb_tipo") applyTipo();
+      });
+    }
 
     iniEl.value = state.start;
     refilter();
