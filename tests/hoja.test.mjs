@@ -329,3 +329,60 @@ test("vista previa: fecha vacía la vacía; CSS de impresión la oculta", async 
   assert.match(css, /@media print\{[^]*#informe_preview/);
   dom.window.close();
 });
+
+// ---- Final fix wave ----
+test("I1: banner dentro del thead de la tabla de hospital y de casa si no validado", () => {
+  const multi = { ...sched, end: "2027-01-20" };
+  for (const estado of ["pendiente", undefined, "otro"]) {
+    const h = buildSheetHTML(multi, regimen(estado), vacio);
+    const tablas = h.match(/<table class="hoja-tabla">[\s\S]*?<\/table>/g) || [];
+    assert.equal(tablas.length, 2, String(estado));
+    for (const t of tablas) {
+      const thead = t.match(/<thead>[\s\S]*?<\/thead>/)[0];
+      assert.ok(thead.includes(BANNER), String(estado));
+      assert.ok(/<th colspan="\d+" class="aviso-pendiente-mes">/.test(thead));
+      assert.ok(!t.slice(t.indexOf("</thead>")).includes(BANNER));
+    }
+  }
+  const v = buildSheetHTML(multi, regimen("validado"), vacio);
+  for (const t of v.match(/<table class="hoja-tabla">[\s\S]*?<\/table>/g)) assert.ok(!t.includes(BANNER));
+});
+
+test("I1: mieloma-isa-kd 12 ciclos pendiente -> banner en thead de la tabla larga", () => {
+  const RxData = require("../js/regimen-data.js");
+  require("../data/regimens/mieloma-isa-kd.js");
+  const r = { ...RxData.get("mieloma-isa-kd"), estado: "pendiente" };
+  const s = globalThis.RxEngine.buildSchedule(r, { start: "2026-11-23", n: 12 });
+  const h = buildSheetHTML(s, r, vacio);
+  const t = h.match(/<table class="hoja-tabla"><thead>[\s\S]*?<\/table>/)[0];
+  assert.ok(t.split("<tr>").length > 40);
+  assert.ok(t.match(/<thead>[\s\S]*?<\/thead>/)[0].includes(BANNER));
+});
+
+test("M2: próximas muestra la etiqueta tras la dosis", () => {
+  const s = { cycles: [{ n: 1, start: "2026-11-23", len: 28 }], end: "2026-12-20", events: [
+    { date: "2026-11-23", cycle: 1, day: 1, farmaco: "Dexa", abrev: "", dosis: "20 mg", veces: 1, lugar: "casa", etiqueta: "premed." },
+    { date: "2026-11-24", cycle: 1, day: 2, farmaco: "Dara", abrev: "", dosis: "10 mg", veces: 1, lugar: "casa", etiqueta: "" },
+  ] };
+  const h = buildSheetHTML(s, regimen("validado"), { ...vacio, hoy: "2026-11-01" });
+  const prox = h.slice(h.indexOf("Sus próximas"), h.indexOf("Días que tiene"));
+  assert.ok(prox.includes("20 mg premed."), prox);
+  assert.ok(!prox.includes("10 mg ") || prox.includes("10 mg</td>"));
+});
+
+test("M1: vista previa se repinta al mostrar Informe y al volver a la pestaña Calendario", async () => {
+  const dom = await loadPage();
+  const d = await fill(dom);
+  const prev = d.getElementById("informe_preview");
+  d.getElementById("pharm_name").value = "Dra. Repintada";
+  dom.window.RxSubtabs.show("informe");
+  assert.ok(prev.innerHTML.includes("Dra. Repintada"));
+  d.getElementById("pharm_name").value = "Dr. Segundo";
+  d.getElementById("sub-btn-calendario").click(); d.getElementById("sub-btn-informe").click();
+  assert.ok(prev.innerHTML.includes("Dr. Segundo"));
+  d.getElementById("pharm_name").value = "Dra. Tercera";
+  dom.window.RxTabs.show("infografia"); dom.window.RxTabs.show("calendario");
+  assert.ok(prev.innerHTML.includes("Dra. Tercera"));
+  assert.deepEqual(dom.errors, []);
+  dom.window.close();
+});

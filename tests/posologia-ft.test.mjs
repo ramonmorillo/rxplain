@@ -341,3 +341,43 @@ test("UI F6: los avisos de cada propuesta se muestran", async () => {
   assert.match(d.querySelector("#far_propuestas li").textContent, /duraci[oó]n/i);
   dom.window.close();
 });
+
+// ---- Final fix wave: guardas de calificadores ----
+test("I2: calificadores no representables -> aviso con la frase, sin propuesta", () => {
+  const casos = [
+    ["Una vez al día en semanas alternas.", "alternas"],
+    ["Días alternos, una vez al día.", "alternos"],
+    ["Un día sí y otro no.", "dia si"],
+    ["Dos veces al día, excepto los fines de semana.", "excepto"],
+    ["Dos veces al día, salvo los sábados y domingos.", "salvo"],
+    ["Una vez al día de lunes a viernes.", "lunes a viernes"],
+    ["Durante la primera semana, una vez al día; después, cada 2 semanas.", "primera semana"],
+    ["Durante las primeras 4 semanas una vez a la semana; después, una vez al mes.", "primeras 4 semanas"],
+    ["Una vez al mes.", "al mes"],
+    ["Dosis mensual de 10 mg.", "mensual"],
+    ["Cada 3 meses.", "meses"],
+    ["Una vez al día, luego una vez a la semana.", "luego"],
+  ];
+  for (const [t, frag] of casos) {
+    const r = RxPosologia.extraer(t);
+    assert.equal(r.propuestas.length, 0, t);
+    assert.ok(r.avisos.some((a) => a.includes(t.replace(/\.$/, "")) && a.toLowerCase().includes(frag)), t + " :: " + r.avisos.join("|"));
+  }
+});
+
+test("I2: frases válidas siguen igual", () => {
+  assert.equal(RxPosologia.extraer("Una vez al día.").propuestas.length, 1);
+  assert.equal(RxPosologia.extraer("Cada 8 semanas.").propuestas[0].cada_dias, 56);
+  for (const t of ["Semanas 0, 2 y 4. Después, cada 8 semanas.", "Semanas 0, 2 y 4 y después cada 8 semanas"]) {
+    const r = RxPosologia.extraer(t);
+    assert.equal(r.propuestas.length, 1, t);
+    assert.equal(r.propuestas[0].cada_dias, 56);
+  }
+  assert.equal(RxPosologia.extraer("Tomar después de las comidas, una vez al día.").propuestas.length, 1);
+});
+
+test("poblaciones: aviso no bloqueante en cada propuesta", () => {
+  const r = RxPosologia.extraer("Adultos: cada 12 horas. Niños: una vez al día.");
+  assert.equal(r.propuestas.length, 2);
+  for (const p of r.propuestas) assert.ok(p.avisos.includes("La ficha distingue poblaciones: revise a cuál corresponde la frase."));
+});

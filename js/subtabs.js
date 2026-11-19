@@ -17,6 +17,7 @@
       }
       if (panel) panel.hidden = !active;
     });
+    document.dispatchEvent(new CustomEvent("rx:subtab", { detail: { name: name } }));
   }
 
   function nameOf(el) {

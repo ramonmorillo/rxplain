@@ -212,3 +212,13 @@ test("UI: ningún dato del paciente en la petición (solo nombre del fármaco)",
   assert.ok(calls.every((u) => !/SECRETO/.test(u)));
   dom.window.close();
 });
+
+test("htmlToText: saltos de línea crudos no parten frases; poblaciones avisadas", async () => {
+  assert.equal(RxCima.htmlToText("Adultos\ncada 12 horas.\nNiños: una vez\nal día."), "Adultos cada 12 horas. Niños: una vez al día.");
+  assert.equal(RxCima.htmlToText("<p>Uno</p><p>Dos\ntres</p>a<br>b"), "Uno\nDos tres\na\nb");
+  const RxPosologia = require("../js/posologia-ft.js");
+  const r = RxPosologia.extraer(RxCima.htmlToText("Adultos\ncada 12 horas.\nNiños: una vez\nal día."));
+  assert.equal(r.propuestas.length, 2);
+  assert.deepEqual(r.propuestas.map((p) => p.veces_al_dia), [2, 1]);
+  for (const p of r.propuestas) assert.ok(p.avisos.some((a) => a.startsWith("La ficha distingue poblaciones")));
+});

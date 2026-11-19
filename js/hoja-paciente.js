@@ -42,7 +42,12 @@
     return { map: map, dates: order };
   }
 
-  function hospitalTable(g) {
+  // Fila de aviso en el thead: Chrome/Edge repiten el thead en cada página impresa.
+  function bannerRow(pendiente, cols) {
+    return pendiente ? '<tr><th colspan="' + cols + '" class="aviso-pendiente-mes">' + BANNER + "</th></tr>" : "";
+  }
+
+  function hospitalTable(g, pendiente) {
     var rows = "";
     g.dates.forEach(function (d) {
       var hs = g.map[d].filter(function (e) { return e.lugar === "hospital"; });
@@ -52,7 +57,7 @@
         "</td></tr>";
     });
     if (!rows) return "<p>No hay visitas al hospital en este calendario.</p>";
-    return '<table class="hoja-tabla"><thead><tr><th>Día</th><th>Medicación en el hospital</th></tr></thead><tbody>' + rows + "</tbody></table>";
+    return '<table class="hoja-tabla"><thead>' + bannerRow(pendiente, 2) + '<tr><th>Día</th><th>Medicación en el hospital</th></tr></thead><tbody>' + rows + "</tbody></table>";
   }
 
   // Días enteros ordenados -> texto compacto: "1–21", "1, 8, 15, 22".
@@ -78,7 +83,7 @@
     return n > 0 ? "Cada " + n + " días (ver calendario)" : "Según el calendario";
   }
 
-  function homeMeds(events, regimen) {
+  function homeMeds(events, regimen, pendiente) {
     var groups = {}, order = [], rows = "";
     var intervalo = regimen && regimen.tipo === "intervalo";
     events.forEach(function (e) {
@@ -111,7 +116,7 @@
       });
     });
     if (!rows) return "<p>No hay medicación para tomar en casa.</p>";
-    return '<table class="hoja-tabla"><thead><tr><th>Medicamento</th><th>Dosis</th><th>Veces</th><th>Qué días</th><th>Dónde</th></tr></thead><tbody>' +
+    return '<table class="hoja-tabla"><thead>' + bannerRow(pendiente, 5) + '<tr><th>Medicamento</th><th>Dosis</th><th>Veces</th><th>Qué días</th><th>Dónde</th></tr></thead><tbody>' +
       rows + '</tbody></table><p class="hoja-nota-dias"><strong>Tome la medicación solo los días marcados en el calendario.</strong></p>';
   }
 
@@ -175,6 +180,7 @@
       var donde = hosp ? "<strong>HOSPITAL</strong>" : e.lugar === "casa" ? "En casa" : "En casa" + (e.lugar === "casa_inyeccion" ? " (inyección)" : e.lugar ? " (" + esc(e.lugar) + ")" : "");
       out += '<tr class="hoja-prox' + (hosp ? " hoja-prox-hospital" : "") + '"><td>' + esc(fmtLong(e.date)) + "</td><td>" +
         esc(e.farmaco) + "</td><td>" + esc(e.dosis) + (Number(e.veces) > 1 ? " (" + esc(e.veces) + " veces al día)" : "") +
+        (e.etiqueta ? " " + esc(e.etiqueta) : "") +
         "</td><td>" + donde + "</td></tr>";
     });
     return out + "</tbody></table></section>";
@@ -209,8 +215,8 @@
       (first ? " · <strong>Inicio:</strong> " + esc(fmtLong(first)) : "") +
       (nCiclos ? " · <strong>Ciclos:</strong> " + nCiclos : " · <strong>Dosis:</strong> " + g.dates.length) + "</p>";
     html += proximas(events, first, validIso(ctx.hoy) ? ctx.hoy : hoyLocal());
-    html += "<h2>Días que tiene que venir al hospital</h2>" + hospitalTable(g);
-    html += "<h2>Medicación en casa</h2>" + homeMeds(events, regimen);
+    html += "<h2>Días que tiene que venir al hospital</h2>" + hospitalTable(g, pendiente);
+    html += "<h2>Medicación en casa</h2>" + homeMeds(events, regimen, pendiente);
     html += '<h2>Calendario mensual</h2><div class="hoja-meses">' + months(schedule, g, pendiente) + "</div>";
     html += contactBlock(ctx.profesional);
     html += '<p class="hoja-pie">Este informe no sustituye las indicaciones de su farmacéutico o médico.</p>';

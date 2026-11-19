@@ -16,6 +16,11 @@
   var HEAD = "(semanas?|dias?)\\s+(\\d+(?:[.,]\\d+)?(?:\\s*(?:,|y|e)\\s*(?:(?:semanas?|dias?)\\s+)?\\d+(?:[.,]\\d+)?)*)";
   var BLOQ = /\b(hasta un maximo|hasta|maximo|maxima|no mas de|mas de|sin superar|no superar|como maximo|si es necesario|si fuera necesario|si precisa|puede aumentarse|puede reducirse|puede aumentar|puede reducir|segun necesidad|en caso de|dosis de carga|dosis de ataque)\b/;
 
+  // Calificadores que la pauta (una sola frecuencia) no sabe representar: nunca se adivina.
+  var GUARD = /\b(alternas|alternos|dias? si|excepto|salvo|fines? de semana|lunes a viernes|sabados?|domingos?|primer(?:a|as|os)\s+(?:\w+\s+)?semanas?|al mes|mensual\w*|cada\s+\w+\s+meses|cada\s+mes|meses)\b/;
+  var CONN_GUARD = /\b(despues(?!\s+de\s+(?:la|las|el|los|comer|cada)\b)|luego|a continuacion)\b/;
+  var POBL = /\b(adultos?|ninos?|pediatric\w*|ancianos?|insuficiencia\s+(?:renal|hepatica))\b/;
+
   function norm(s) { return String(s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, ""); }
   function num(tok) { return WORDS[tok] !== undefined ? WORDS[tok] : parseFloat(String(tok).replace(",", ".")); }
   function isInt(x) { return isFinite(x) && Math.abs(x - Math.round(x)) < 1e-9; }
@@ -37,6 +42,12 @@
     function aviso(msg) { avisos.push("«" + frase + "»: " + msg); }
     function add(pos, p) { p.frase = frase; found.push({ pos: pos, p: p }); }
     var m, dropped = false;
+
+    m = GUARD.exec(w);
+    if (m) { aviso("contiene «" + m[1] + "» (calendario o fases que no se pueden representar con una sola frecuencia); no se propone pauta."); return; }
+    if (CONN_GUARD.test(w) && !new RegExp("\\b" + HEAD + "\\s*[,;]?\\s*(?:y\\s+)?" + CONN + "\\b[^.]*?\\bcada\\s+(" + NUM + ")\\s*(semanas?|dias?)").test(w)) {
+      aviso("contiene «" + CONN_GUARD.exec(w)[1] + "» (una secuencia de fases que no se puede representar); no se propone pauta."); return;
+    }
 
     m = BLOQ.exec(w);
     if (m) { aviso("contiene «" + m[1] + "» (máximo, límite, condición o dosis especial); no se propone pauta."); return; }
@@ -193,6 +204,9 @@
     props = props.filter(function (p) { var k = JSON.stringify(p); if (seen[k]) return false; seen[k] = 1; return true; });
     if (!props.length) {
       avisos.unshift("No se reconoció ninguna pauta en el texto; no se propone nada. Revise la ficha técnica y cree la pauta a mano.");
+    }
+    if (POBL.test(norm(texto))) {
+      props.forEach(function (p) { p.avisos.push("La ficha distingue poblaciones: revise a cuál corresponde la frase."); });
     }
     props.forEach(function (p) { p.avisos.forEach(function (a) { avisos.push("«" + p.frase + "»: " + a); }); });
     return { propuestas: props, avisos: avisos };

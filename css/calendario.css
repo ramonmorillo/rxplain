@@ -119,3 +119,7 @@
 .informe-preview .hoja-med{display:block}
 .informe-preview .hoja-ciclo{display:block;font-weight:800;text-decoration:underline}
 .informe-preview .hoja-contacto{margin-top:14px;border-top:2px solid #000}
+
+/* Banner de validación en el thead: se repite en cada página impresa (Chrome/Edge). */
+.hoja-tabla thead{display:table-header-group}
+.hoja-tabla th.aviso-pendiente-mes{border:3px solid #000;text-align:center;font-weight:800;background:#fff;font-size:11pt}

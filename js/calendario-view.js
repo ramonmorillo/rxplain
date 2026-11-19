@@ -384,6 +384,9 @@
     document.addEventListener("click", function (e) {
       if (e.target && e.target.closest && e.target.closest("#sub-btn-informe")) paintPreview();
     });
+    // Mostrar Informe (clic, flechas o API) o volver a la pestaña Calendario: la vista previa se repinta.
+    document.addEventListener("rx:subtab", function (e) { if (e.detail && e.detail.name === "informe") paintPreview(); });
+    document.addEventListener("rx:tab", function (e) { if (e.detail && e.detail.name === "calendario") paintPreview(); });
     root.querySelector("#cal_cambiar").addEventListener("click", function () { goSub("esquemas"); });
 
     selEl.addEventListener("change", function () { resetForRegimen(); paint(true); });

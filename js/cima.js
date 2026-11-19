@@ -19,6 +19,7 @@
 
   function htmlToText(html) {
     var s = str(html)
+      .replace(/\s*\n\s*/g, " ")
       .replace(/<(script|style)\b[\s\S]*?<\/\1\s*>/gi, " ")
       .replace(/<br\s*\/?>/gi, "\n")
       .replace(/<\/(p|div|li|tr|h[1-6]|table|ul|ol)\s*>/gi, "\n");
