@@ -322,3 +322,41 @@ test("UI: descartados por formato se muestran en el diagnóstico", async () => {
   assert.match(d.getElementById("far_diag").textContent, /2 resultados descartados por formato/);
   dom.window.close();
 });
+
+test("principio activo: si la lista no trae pactivos se usa el VTM (caso real de CIMA)", async () => {
+  const { cima } = mk(() => resp({ resultados: [
+    { nregistro: "1161164001", nombre: "AMGEVITA 20 MG", pactivos: null, vtm: { id: 398728003, nombre: "adalimumab" } },
+    { nregistro: "2", nombre: "SIN DATOS", vtm: null },
+    { nregistro: "3", nombre: "CON PACTIVOS", pactivos: "X", vtm: { nombre: "otro" } }
+  ] }, { json: true }));
+  const r = await cima.buscar("adalimu");
+  assert.equal(r[0].pactivos, "adalimumab");
+  assert.equal(r[1].pactivos, "");
+  assert.equal(r[2].pactivos, "X");
+});
+
+test("UI: «Ver 4.2» lleva el apartado a la vista, enfoca su título y marca el resultado elegido", async () => {
+  const { dom, d } = await ui((url) => /docSegmentado/.test(url)
+    ? resp("<p>Posología: 40 mg cada 14 días.</p>")
+    : resp(LISTA, { json: true }));
+  const vistos = [];
+  dom.window.Element.prototype.scrollIntoView = function () { vistos.push(this.id || this.tagName); };
+  d.getElementById("far_buscar").value = "farm";
+  d.getElementById("far_buscar_btn").click();
+  await tick();
+  const filas = d.querySelectorAll("#far_resultados li");
+  filas[1].querySelector("button.far-elegir").click();
+  await tick();
+  assert.ok(vistos.includes("far_ficha"), "se desplaza a la ficha");
+  assert.equal(d.activeElement.tagName, "H3");
+  assert.equal(filas[1].getAttribute("aria-current"), "true");
+  assert.ok(filas[1].classList.contains("far-elegido"));
+  assert.equal(filas[0].getAttribute("aria-current"), null);
+  // elegir otro mueve la marca
+  filas[0].querySelector("button.far-elegir").click();
+  await tick();
+  assert.equal(filas[1].getAttribute("aria-current"), null);
+  assert.equal(filas[0].getAttribute("aria-current"), "true");
+  assert.deepEqual(dom.errors, []);
+  dom.window.close();
+});

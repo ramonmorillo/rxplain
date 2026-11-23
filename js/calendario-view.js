@@ -68,7 +68,7 @@
     if (cycleStart) {
       html += '<span class="ciclo-ini" data-ciclo-inicio="' + cycleStart.n + '" data-date="' + iso + '">C' + cycleStart.n + "</span>";
     }
-    if (hospital) html += '<span class="etq-hospital">HOSPITAL</span>';
+    if (hospital) html += '<span class="etq-hospital"><span class="etq-largo">HOSPITAL</span><span class="etq-corto" aria-hidden="true">HOSP.</span></span>';
     evs.forEach(function (e) {
       var tip = e.farmaco + " · " + e.dosis + (e.veces > 1 ? " · " + e.veces + " veces al día" : "") + (e.etiqueta ? " · " + e.etiqueta : "");
       html += '<span class="pildora lugar-' + esc(e.lugar) + '" title="' + esc(tip) + '">' + esc(e.abrev) + "</span>";

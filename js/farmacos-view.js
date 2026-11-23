@@ -84,8 +84,13 @@
       if (window.RxCalendar && window.RxCalendar.precargar(f) && window.RxSubtabs) window.RxSubtabs.show("esquemas");
     }
 
-    function elegir(m) {
+    function elegir(m, li) {
       var my = ++seq;
+      // Marca el resultado elegido (la lista puede tener decenas de filas).
+      Array.prototype.forEach.call(lista.querySelectorAll("li"), function (x) {
+        x.classList.remove("far-elegido"); x.removeAttribute("aria-current");
+      });
+      if (li) { li.classList.add("far-elegido"); li.setAttribute("aria-current", "true"); }
       selected = { nregistro: m.nregistro, pactivos: m.pactivos, nombre: m.nombre, url: m.url };
       ficha.hidden = false;
       ficha.textContent = "";
@@ -102,6 +107,11 @@
       var p = el("p"); p.appendChild(a); ficha.appendChild(p);
       ficha.appendChild(pre); ficha.appendChild(borrador); ficha.appendChild(prop);
       ficha.appendChild(propLista); ficha.appendChild(avLista);
+      // El apartado se pinta tras toda la lista de resultados: se lleva a la vista y se enfoca su título
+      // (si no, al pulsar «Ver 4.2» parece que no ocurre nada).
+      h.setAttribute("tabindex", "-1");
+      if (typeof ficha.scrollIntoView === "function") { try { ficha.scrollIntoView({ block: "start" }); } catch (e) { /* entorno sin scroll */ } }
+      try { h.focus({ preventScroll: true }); } catch (e) { /* sin foco */ }
       var textoFt = "";
       prop.addEventListener("click", function () {
         propLista.textContent = ""; avLista.textContent = "";
@@ -121,6 +131,8 @@
         setEstado(r.propuestas.length
           ? r.propuestas.length + " propuesta(s) de pauta. Compruebe cada una con la frase de la ficha."
           : "No se propone ninguna pauta.");
+        var destino = propLista.firstChild || avLista;
+        if (destino && typeof destino.scrollIntoView === "function") { try { destino.scrollIntoView({ block: "nearest" }); } catch (e) { /* sin scroll */ } }
       });
       setEstado("Cargando el apartado 4.2…");
       var c;
@@ -148,7 +160,7 @@
           (m.labtitular ? " · " + m.labtitular : "")));
         li.appendChild(document.createTextNode(" "));
         var b = el("button", { type: "button", class: "btn btn-sec far-elegir" }, "Ver 4.2");
-        b.addEventListener("click", function () { elegir(m); });
+        b.addEventListener("click", function () { elegir(m, li); });
         li.appendChild(b);
         li.appendChild(document.createTextNode(" "));
         li.appendChild(el("a", { href: m.url, target: "_blank", rel: "noopener" }, "CIMA"));

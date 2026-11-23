@@ -142,7 +142,7 @@
     var items = form.items.map(function (it) { return buildItem(it, form.tipo, cicloDias); });
 
     var r = {
-      id: nextId(),
+      id: "",
       nombre: nombre,
       area: form.area,
       linea: "Pauta propia",
@@ -160,6 +160,15 @@
       r.fases = [{ desde: 1, hasta: null, duracion: cicloDias, etiqueta: "Pauta propia", items: items }];
     }
     if (form.indefinida === true || form.indefinida === "true") r.duracion = "indefinida";
+    // Una pauta propia idéntica a otra ya creada (misma definición) se reutiliza: no se duplica en el selector.
+    var firma = JSON.stringify(r);
+    var previa = RxData.list().filter(function (x) {
+      if (!/^propia-/.test(x.id)) return false;
+      var y = {}; Object.keys(x).forEach(function (k) { y[k] = x[k]; }); y.id = "";
+      return JSON.stringify(y) === firma;
+    })[0];
+    if (previa) return previa;
+    r.id = nextId();
     RxData.register(r);
     return r;
   }

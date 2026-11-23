@@ -206,6 +206,12 @@
 .dia.festivo{background:#fde8e8}
 .dia-hospital{border-color:var(--primary);box-shadow:inset 0 0 0 2px var(--primary)}
 .etq-hospital{display:block;font-weight:800;font-size:.62rem;color:var(--primary)}
+/* «HOSP.» por defecto; «HOSPITAL» solo si el mes es lo bastante ancho (la celda depende de la columna del mes, no de la ventana). */
+.etq-largo{display:none}
+@supports (container-type:inline-size){
+  .mes{container-type:inline-size}
+  @container (min-width:440px){.etq-largo{display:inline}.etq-corto{display:none}}
+}
 .ciclo-ini{background:var(--accent);color:#fff;border-radius:3px;padding:0 3px;font-weight:700}
 .pildora{display:inline-block;margin:1px 1px 0 0;padding:0 4px;border-radius:8px;background:var(--primary);color:#fff;font-size:.62rem;font-weight:600}
 .pildora.lugar-casa,.pildora.lugar-casa_inyeccion{background:var(--muted)}
@@ -241,6 +247,7 @@
 .far-nota{margin:6px 0}
 .far-estado{min-height:1.2em;font-weight:600;color:var(--muted)}
 .far-resultados{list-style:none;margin:8px 0;padding:0}
+.far-resultados li.far-elegido{border-color:var(--primary);box-shadow:inset 0 0 0 2px var(--primary)}
 .far-resultados li{padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;background:var(--surface)}
 .far-meta{color:var(--muted)}
 .far-ficha{margin-top:12px;padding:12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface)}
