@@ -18,7 +18,7 @@ Genera una infografía imprimible de la medicación del paciente. Incluye una co
 - **Hoja del paciente imprimible**: salvo que se marque la casilla «Pauta revisada y validada por el farmacéutico» (`#cb_validada`, desmarcada por defecto), la pauta queda `pendiente` y la hoja lleva el banner «ESQUEMA PENDIENTE DE VALIDACIÓN — NO ENTREGAR AL PACIENTE» (en cabecera y repetido en cada mes). La tabla de medicación en casa indica en qué días del ciclo se toma cada fármaco.
 
 #### Flujo de las tres sub-pestañas
-1. **Fármacos**: buscar el medicamento en CIMA, leer el apartado 4.2 y, si se quiere, proponer un borrador de pauta. **Usar en el calendario** lo precarga en la pestaña Calendario y deja el cursor en el primer campo que falta (normalmente la dosis).
+1. **Desde el propio campo «Fármaco»** de la pauta (Calendario): al escribir 3 o más letras aparece un desplegable con los medicamentos de CIMA; al elegir uno se lee su ficha (apartado 4.2) y se rellena la pauta tentativa (la propuesta cuya frase menciona la concentración elegida; un selector permite cambiar a otra propuesta de la ficha). Queda el cursor en la dosis. **O en la sub-pestaña Fármacos**: buscar el medicamento en CIMA, leer el apartado 4.2 y, si se quiere, proponer un borrador de pauta. **Usar en el calendario** lo precarga en la pestaña Calendario y deja el cursor en el primer campo que falta (normalmente la dosis).
 2. **Calendario**: la pauta (formulario `#cal_pauta`), fecha de inicio, ciclos/dosis y retrasos; avisos de conflicto y calendario mensual.
    - **Pauta indefinida** (casilla `#cal_indefinida`, control del usuario; una propuesta *diaria* de la ficha la marca): el nº de ciclos/dosis se calcula para cubrir hasta `#cal_hasta` («Calendario hasta», por defecto 31/12/2027); el campo de ciclos queda automático. El motor calcula como máximo 60 ciclos/dosis: si no llega a esa fecha se muestra el aviso «Calendario recortado hasta DD/MM/AAAA». Si la fecha de inicio es posterior a «Calendario hasta» se avisa y no se calcula nada.
    - Un nº de ciclos fuera de 1–60 o no entero se ajusta y se avisa de lo que se ha calendarizado.
@@ -29,7 +29,7 @@ Genera una infografía imprimible de la medicación del paciente. Incluye una co
 Declaración, comprobada con una búsqueda en el código (`js/`, `data/`, `index.html`, `css/`):
 
 - **No se guarda nada del paciente.** No hay uso de `localStorage`, `sessionStorage`, cookies ni IndexedDB. Al recargar la página los datos introducidos desaparecen.
-- **No hay comunicaciones de red**, salvo la consulta opcional ya existente a la API pública de CIMA/AEMPS (`https://cima.aemps.es/cima/rest`) desde la pestaña Infografía (`js/infografia.js`). La sub-pestaña Fármacos del Calendario (`js/cima.js`, `js/farmacos-view.js`) consulta la misma API solo al pulsar Buscar o elegir un resultado, enviando únicamente el nombre del fármaco o su nº de registro; el resto del Calendario no realiza peticiones de red.
+- **No hay comunicaciones de red**, salvo las consultas a la API pública de CIMA/AEMPS (`https://cima.aemps.es/cima/rest`), que solo reciben el **texto del campo Fármaco** (o el nº de registro de un medicamento ya elegido), nunca datos del paciente: (a) el desplegable del campo «Fármaco» de la pauta consulta CIMA **mientras se escribe** (a partir de 3 letras y con una pausa de ~0,35 s) y, al elegir una opción, lee su apartado 4.2 (`js/farmaco-combo.js`, `js/calendario-view.js`); (b) la sub-pestaña Fármacos consulta solo al pulsar Buscar o elegir un resultado (`js/cima.js`, `js/farmacos-view.js`); (c) la pestaña Infografía mantiene su consulta opcional (`js/infografia.js`). El resto del Calendario no realiza peticiones de red.
 - No hay analítica, CDN, fuentes externas ni scripts de terceros. Los enlaces a EMA, AEMPS, CIMA y SEFH de la infografía son enlaces que abre el usuario.
 
 Esta declaración describe el código del repositorio. Si se modifica el código, debe volver a verificarse.
@@ -65,6 +65,7 @@ js/infografia.js           Infografía y consulta opcional a CIMA
 js/tabs.js                 Pestañas
 js/cima.js                 Cliente CIMA/AEMPS (búsqueda y apartado 4.2; `fetch` inyectable)
 js/farmacos-view.js        Sub-pestaña Fármacos
+js/farmaco-combo.js        Desplegable de fármacos (CIMA) del campo «Fármaco» de la pauta
 js/schedule-engine.js      Motor de calendarización (fechas, festivos)
 js/regimen-data.js         Validador de la forma de una pauta
 js/calendario-view.js      Interfaz de la pestaña Calendario (incluye los avisos y la detección de conflictos)

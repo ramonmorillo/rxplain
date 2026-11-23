@@ -446,7 +446,14 @@
       tmp.innerHTML = itemRow();
       pautaEl.querySelector("#cb_items").appendChild(tmp.firstChild);
       applyTipo();
-      return pautaEl.querySelector("#cb_items").lastChild;
+      var row = pautaEl.querySelector("#cb_items").lastChild;
+      if (window.RxFarmacoCombo && window.RxCima) {
+        window.RxFarmacoCombo.attach(row.querySelector('[data-f="farmaco"]'), {
+          buscar: function (q) { return cimaClient().buscar(q); },
+          onPick: function (m) { elegirFarmaco(row, m); }
+        });
+      }
+      return row;
     }
 
     function renderPauta() {
@@ -455,7 +462,8 @@
         '<p class="cb-ayuda">Defina qué se toma y cuándo; el calendario se actualiza al escribir. ' +
         "¿Parte de un medicamento? Búsquelo en <strong>Fármacos</strong> y pulse «Usar en el calendario». " +
         "La dosis es solo un texto: la herramienta no calcula dosis.</p>" +
-        '<p id="cb_origen" class="aviso cb-origen" hidden></p>' +
+        '<div id="cb_origen" class="aviso cb-origen" hidden><span id="cb_origen_txt"></span> ' +
+        '<label class="cb-prop" hidden>Propuesta de la ficha <select id="cb_propuesta"></select></label></div>' +
         '<p class="cb-ejemplos">Ejemplos: <button type="button" class="btn btn-sec" id="cal_ej_bio">Biológico cada N semanas</button> ' +
         '<button type="button" class="btn btn-sec" id="cal_ej_oral">Oral días 1–21 de 28</button></p>' +
         '<div class="cb-campos">' +
@@ -538,8 +546,7 @@
         if (vd && it.veces_al_dia === "") { vd.value = ""; vd.setAttribute("placeholder", "sin dato en la ficha (vacío = 1): indíquelo"); }
       });
       applyTipo();
-      var origen = pautaEl.querySelector("#cb_origen");
-      if (f.origen) { origen.textContent = f.origen; origen.hidden = false; }
+      setOrigen(f.origen ? f.origen + (f.frase ? " Frase de la ficha: «" + f.frase + "»." : "") : "");
       if (f.n) { state.nManual = String(f.n); }
       indefEl.checked = !!f.indefinida;
       cicEl.value = state.nManual;
@@ -549,21 +556,131 @@
       paint(true);
     }
 
+    // ---- Desplegable de fármacos (CIMA): elegir → ficha 4.2 → pauta tentativa → formulario ----
+    var cima = null;
+    function cimaClient() {
+      if (!cima) cima = window.RxCima.create({ fetch: typeof window.fetch === "function" ? window.fetch.bind(window) : null });
+      return cima;
+    }
+    var pick = { seq: 0, props: [], med: null };
+
+    function setOrigen(t) {
+      var o = pautaEl.querySelector("#cb_origen");
+      pautaEl.querySelector("#cb_origen_txt").textContent = t || "";
+      if (!t) pautaEl.querySelector(".cb-prop").hidden = true;
+      o.hidden = !t;
+    }
+
+    function setField(row, k, v) {
+      var e = row.querySelector('[data-f="' + k + '"]');
+      if (e) e.value = v === undefined || v === null ? "" : String(v);
+    }
+
+    // Vuelca la propuesta k. Con una sola fila reemplaza la pauta entera; con varias, solo los campos de esa fila.
+    function mostrarPropuesta(row, k) {
+      var f = pick.props[k];
+      var filas = pautaEl.querySelectorAll(".cb-item");
+      var dosis = row.querySelector('[data-f="dosis"]').value;
+      var destino = row;
+      if (filas.length === 1) {
+        cargar(f);
+        destino = pautaEl.querySelector(".cb-item");
+      } else {
+        var it = f.items[0];
+        Object.keys(it).forEach(function (c) { if (c !== "dosis" && c !== "lugar") setField(row, c, it[c]); });
+        if (f.tipo !== tipoEl().value) {
+          setOrigen("La propuesta de la ficha es de otro tipo (" + (f.tipo === "intervalo" ? "por intervalo" : "por ciclos") +
+            "): se ha copiado el nombre; complete los días a mano.");
+        } else {
+          setOrigen(f.origen + (f.frase ? " Frase de la ficha: «" + f.frase + "»." : ""));
+        }
+        recompute(); paint(true);
+      }
+      if (dosis) setField(destino, "dosis", dosis);
+      // selector de alternativas
+      var wrap = pautaEl.querySelector(".cb-prop"), sel = pautaEl.querySelector("#cb_propuesta");
+      if (pick.props.length > 1) {
+        sel.textContent = "";
+        pick.props.forEach(function (p, i) {
+          var o = document.createElement("option");
+          o.value = String(i);
+          o.textContent = (i + 1) + "/" + pick.props.length + ": «" + (p.frase || "").slice(0, 70) + ((p.frase || "").length > 70 ? "…" : "") + "»";
+          sel.appendChild(o);
+        });
+        sel.value = String(k);
+        wrap.hidden = false;
+        pautaEl.querySelector("#cb_origen").hidden = false;
+      }
+      recompute(); paint(true);
+      enfocarFalta(destino);
+    }
+
+    function enfocarFalta(row) {
+      var campos = row.querySelectorAll("input[data-f]");
+      var objetivo = row.querySelector('[data-f="dosis"]');
+      Array.prototype.some.call(campos, function (c) {
+        var lab = c.closest("label");
+        if (lab && lab.hidden) return false;
+        if (c.value === "" && c.getAttribute("data-f") !== "abrev") { objetivo = c; return true; }
+        return false;
+      });
+      if (objetivo) {
+        if (typeof objetivo.scrollIntoView === "function") { try { objetivo.scrollIntoView({ block: "center" }); } catch (e) { /* sin scroll */ } }
+        if (objetivo.focus) objetivo.focus();
+      }
+    }
+
+    // La ficha recoge varias dosis/concentraciones: la propuesta tentativa es la primera cuya frase menciona
+    // la concentración de la presentación elegida («… 75 MG …»); si no hay coincidencia, la primera.
+    function mejorPropuesta(props, nombre) {
+      var m = /(\d+(?:[.,]\d+)?)\s*(mg|g|mcg|µg|ui|u)\b/i.exec(String(nombre || ""));
+      if (!m) return 0;
+      var re = new RegExp("(^|[^\\d.,])" + m[1].replace(".", "[.,]").replace(",", "[.,]") + "\\s*" + m[2] + "\\b", "i");
+      for (var i = 0; i < props.length; i++) if (re.test(props[i].frase || "")) return i;
+      return 0;
+    }
+
+    function elegirFarmaco(row, m) {
+      var my = ++pick.seq;
+      var nombre = m.pactivos || m.nombre || "";
+      setField(row, "farmaco", nombre);
+      if (!row.querySelector('[data-f="abrev"]').value) setField(row, "abrev", nombre.slice(0, 4));
+      pick.med = { nombre: m.nombre, pactivos: m.pactivos, nregistro: m.nregistro };
+      pick.props = [];
+      setOrigen("Cargando el apartado 4.2 de la ficha técnica de " + (m.nombre || nombre) + " en CIMA…");
+      recompute(); paint(true);
+      var c;
+      try { c = cimaClient().apartado(m.nregistro, "4.2"); } catch (e) { c = Promise.reject(e); }
+      c.then(function (r) {
+        if (my !== pick.seq) return;
+        var res = window.RxPosologia ? window.RxPosologia.extraer(r.texto) : { propuestas: [] };
+        if (!res.propuestas.length) {
+          setOrigen("La ficha técnica de " + (m.nombre || nombre) + " no permite proponer una pauta automática: complete los días a mano.");
+          enfocarFalta(row);
+          return;
+        }
+        pick.props = res.propuestas.map(function (p) { return window.RxPosologia.aBorrador(p, pick.med); });
+        mostrarPropuesta(row, mejorPropuesta(pick.props, m.nombre));
+      }, function (e) {
+        if (my !== pick.seq) return;
+        setOrigen("No se pudo obtener la ficha técnica (" + ((e && e.message) || "error") + "): complete la pauta a mano.");
+        enfocarFalta(row);
+      });
+    }
+
+    pautaEl.addEventListener("change", function (e) {
+      if (e.target && e.target.id === "cb_propuesta") {
+        var filas = pautaEl.querySelectorAll(".cb-item");
+        mostrarPropuesta(filas[0], Number(e.target.value));
+        e.stopPropagation();
+      }
+    }, true);
+
     function precargar(f) {
       if (!f) return false;
       cargar(f);
       goSub("calendario");
-      var vacio = pautaEl.querySelector('.cb-item [data-f="dosis"]');
-      var campos = pautaEl.querySelectorAll('.cb-item input[data-f]:not([hidden])');
-      Array.prototype.some.call(campos, function (c) {
-        if (c.closest("label") && c.closest("label").hidden) return false;
-        if (c.value === "" && c.getAttribute("data-f") !== "abrev") { vacio = c; return true; }
-        return false;
-      });
-      if (vacio) {
-        if (typeof vacio.scrollIntoView === "function") { try { vacio.scrollIntoView({ block: "center" }); } catch (e) { /* sin scroll */ } }
-        if (vacio.focus) vacio.focus();
-      }
+      enfocarFalta(pautaEl.querySelector(".cb-item"));
       return true;
     }
     precargarImpl = precargar;

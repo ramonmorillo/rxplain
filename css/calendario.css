@@ -265,3 +265,17 @@
 .cal-reinicio-botones{display:flex;flex-wrap:wrap;gap:8px}
 #cal_reinicio_si{background:#c0392b;border-color:#c0392b;color:#fff}
 @media print{.cal-reinicio,.cal-reinicio-barra{display:none!important}}
+
+/* Desplegable de fármacos (CIMA) */
+.far-combo-host{position:relative}
+.far-combo{position:absolute;z-index:20;top:100%;left:0;right:0;margin:2px 0 0;padding:0;list-style:none;max-height:280px;overflow:auto;
+  background:var(--surface);border:1px solid var(--primary);border-radius:var(--radius-sm);box-shadow:0 6px 18px rgba(0,0,0,.18);font-weight:400}
+.far-combo[hidden]{display:none}
+.far-combo li{padding:8px 10px;cursor:pointer;font-size:.9rem;border-bottom:1px solid var(--border)}
+.far-combo li:last-child{border-bottom:0}
+.far-combo li[aria-selected="true"],.far-combo li:hover{background:#e3f1f4}
+.far-combo li.far-combo-nota{cursor:default;color:var(--muted);font-style:italic}
+.far-combo li.far-combo-nota:hover{background:transparent}
+.cb-prop{display:inline-flex;flex-direction:row;align-items:center;gap:6px;font-weight:600}
+.cb-prop[hidden]{display:none}
+.cb-prop select{max-width:100%;font:inherit;padding:4px 6px}

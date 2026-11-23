@@ -185,7 +185,7 @@ test("UI: aviso de borrador, propuestas con frase origen, y 'Usar en el calendar
   assert.equal(d.getElementById("cb_nombre").value, "FARMAXINA");
   const origen = d.getElementById("cb_origen");
   assert.equal(origen.hidden, false);
-  assert.match(origen.textContent, /^Borrador de la ficha técnica de FARMAX 10 mg \(nº reg\. 12345\): revíselo y complételo; no sustituye la validación farmacéutica\.$/);
+  assert.match(d.getElementById("cb_origen_txt").textContent, /^Borrador de la ficha técnica de FARMAX 10 mg \(nº reg\. 12345\): revíselo y complételo; no sustituye la validación farmacéutica\. Frase de la ficha: «Se administra en las semanas 0, 2 y 4 y después cada 8 semanas\.»\.$/);
   assert.equal(d.querySelectorAll("#cal_pauta .cb-item").length, 1);
   assert.equal(campo(d, "farmaco").value, "FARMAXINA");
   assert.equal(campo(d, "dosis").value, "");
