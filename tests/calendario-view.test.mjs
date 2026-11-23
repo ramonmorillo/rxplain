@@ -295,3 +295,67 @@ test("selector: cada opción muestra el estado como texto", async () => {
   assert.match(txt("test-reuma"), /✔ validado/);
   dom.window.close();
 });
+
+test("I-2: un nº de ciclos fuera de 1..60 o no entero avisa del ajuste", async () => {
+  const dom = await loadPage();
+  const d = setup(dom, "mieloma-drd", "2026-11-23");
+  const av = () => d.getElementById("cal_avisos");
+  for (const [v, efectivo] of [["", 1], ["0", 1], ["-3", 1], ["2.5", 2], ["999", 60]]) {
+    setValue(dom, d.getElementById("cal_ciclos"), v);
+    const a = av().querySelector(".aviso-ajuste");
+    assert.ok(a, `aviso con "${v}"`);
+    assert.match(a.textContent, new RegExp("se han calendarizado " + efectivo + "\\b"), `efectivo con "${v}"`);
+    assert.equal(d.querySelectorAll("#cal_meses [data-ciclo-inicio]").length, efectivo, `ciclos pintados con "${v}"`);
+  }
+  for (const v of ["1", "6", "60"]) {
+    setValue(dom, d.getElementById("cal_ciclos"), v);
+    assert.equal(av().querySelector(".aviso-ajuste"), null, `sin aviso con "${v}"`);
+  }
+  assert.deepEqual(dom.errors, []);
+  dom.window.close();
+});
+
+test("I-2: en pautas por intervalo el aviso habla de dosis", async () => {
+  const dom = await loadPage();
+  const d = dom.window.document;
+  dom.window.RxData.register({
+    id: "test-intervalo", nombre: "Prueba por intervalos", area: "Oncología", linea: "sintética",
+    estado: "validado", fuente: "prueba", fecha_revision: "2026-01-01", ciclos_defecto: 5,
+    ...regimenIntervalo
+  });
+  dom.window.RxCalendar.mount(d.getElementById("calendarioRoot"));
+  setValue(dom, d.getElementById("cal_esquema"), "test-intervalo", "change");
+  setValue(dom, d.getElementById("cal_inicio"), "2026-11-23", "change");
+  setValue(dom, d.getElementById("cal_ciclos"), "999");
+  assert.match(d.querySelector("#cal_avisos .aviso-ajuste").textContent, /«Dosis» ajustado/);
+  dom.window.close();
+});
+
+test("I-1: «change» de Ciclos no recrea los campos de retraso (no pierde el foco)", async () => {
+  const dom = await loadPage();
+  const d = setup(dom, "mieloma-drd", "2026-11-23", 3);
+  const antes = d.querySelector('[data-delay="2"]');
+  antes.focus();
+  setValue(dom, d.getElementById("cal_ciclos"), "3", "change");
+  const despues = d.querySelector('[data-delay="2"]');
+  assert.equal(despues, antes, "mismo nodo");
+  assert.equal(d.activeElement, antes, "conserva el foco");
+  setValue(dom, antes, "5");
+  setValue(dom, d.getElementById("cal_ciclos"), "3", "change");
+  assert.equal(d.querySelector('[data-delay="2"]').value, "5");
+  assert.equal(d.querySelector('[data-ciclo-inicio="2"]').getAttribute("data-date"), "2026-12-26");
+  dom.window.close();
+});
+
+test("I-1: al cambiar el nº de ciclos los campos de retraso se ajustan y conservan lo escrito", async () => {
+  const dom = await loadPage();
+  const d = setup(dom, "mieloma-drd", "2026-11-23", 3);
+  setValue(dom, d.querySelector('[data-delay="2"]'), "5");
+  setValue(dom, d.getElementById("cal_ciclos"), "4");
+  assert.equal(d.querySelectorAll("[data-delay]").length, 3);
+  assert.equal(d.querySelector('[data-delay="2"]').value, "5");
+  setValue(dom, d.getElementById("cal_ciclos"), "1");
+  assert.equal(d.querySelectorAll("[data-delay]").length, 0);
+  assert.equal(d.getElementById("cal_retrasos").hidden, true);
+  dom.window.close();
+});

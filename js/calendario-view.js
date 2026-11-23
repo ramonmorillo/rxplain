@@ -136,6 +136,11 @@
 
   function renderAvisos(regimen, schedule) {
     var html = "";
+    if (schedule.ajusteN) {
+      html += '<p class="aviso aviso-ajuste" role="alert"><strong>Valor de «' + (schedule.cycles.length ? "Ciclos" : "Dosis") + '» ajustado.</strong> ' +
+        "Ha escrito «" + (schedule.ajusteN.pedido === "" ? "vacío" : esc(schedule.ajusteN.pedido)) + "»; se han calendarizado " +
+        schedule.ajusteN.efectivo + " (solo se admiten números enteros de 1 a 60).</p>";
+    }
     if (schedule.recortadoHasta) {
       html += '<p class="aviso aviso-recorte" role="alert"><strong>Calendario recortado hasta ' + fmtDMY(schedule.recortadoHasta) +
         ".</strong> El motor calcula como máximo 60 " + (schedule.cycles.length ? "ciclos" : "dosis") +
@@ -321,11 +326,25 @@
     function rebuildDelays(schedule) {
       var r = regimen();
       if (!r || r.tipo === "intervalo") { retEl.innerHTML = ""; retEl.hidden = true; return; }
+      var need = [];
+      for (var c = 2; c <= schedule.cycles.length; c++) need.push(String(c));
+      // Si los campos ya son los necesarios no se recrean: recrearlos destruiría el que
+      // el usuario acaba de enfocar (el «change» de Ciclos llega justo al hacer clic en él).
+      var have = Array.prototype.map.call(retEl.querySelectorAll("[data-delay]"), function (i) { return i.getAttribute("data-delay"); });
+      if (need.length && have.join(",") === need.join(",")) {
+        Array.prototype.forEach.call(retEl.querySelectorAll("[data-delay]"), function (i) {
+          var v = state.delays[i.getAttribute("data-delay")];
+          var want = v === undefined ? "" : String(v);
+          if (i.value !== want && document.activeElement !== i) i.value = want;
+        });
+        retEl.hidden = false;
+        return;
+      }
       var html = "";
-      for (var c = 2; c <= schedule.cycles.length; c++) {
+      need.forEach(function (c) {
         html += '<label>Retraso C' + c + ' (días) <input type="number" min="0" data-delay="' + c + '" value="' +
           esc(state.delays[c] === undefined ? "" : state.delays[c]) + '"></label> ';
-      }
+      });
       retEl.innerHTML = html;
       retEl.hidden = !html;
     }
@@ -348,7 +367,12 @@
         cicEl.value = String(cnt || 1);
         return { r: r, schedule: cov.schedule, indefinida: true, hasta: hasta };
       }
-      return { r: r, schedule: RxEngine.buildSchedule(r, { start: start, n: cicEl.value, delays: state.delays }), indefinida: false };
+      var sch = RxEngine.buildSchedule(r, { start: start, n: cicEl.value, delays: state.delays });
+      // El motor acota n a 1..60 sin avisar: si el valor escrito difiere del calculado, se informa.
+      var efectivo = sch.cycles.length || sch.events.reduce(function (m, e) { return e.cycle > m ? e.cycle : m; }, 0);
+      var pedido = String(cicEl.value).trim();
+      if (!/^\d+$/.test(pedido) || Number(pedido) !== efectivo) sch.ajusteN = { pedido: pedido, efectivo: efectivo };
+      return { r: r, schedule: sch, indefinida: false };
     }
 
     function paintResumen() {
