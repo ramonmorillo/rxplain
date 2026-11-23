@@ -9,7 +9,7 @@ import { definirPauta } from "./helpers/pauta.mjs";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const norm = (t) => String(t).replace(/\s+/g, " ").trim();
 
-test("la guía es una tercera pestaña: oculta por defecto, se abre con la pestaña y con el botón de la cabecera", async () => {
+test("la guía es una pestaña de la barra: oculta por defecto; se abre con su pestaña y con los enlaces de la portada y del pie", async () => {
   const dom = await loadPage();
   const d = dom.window.document;
   const pan = d.getElementById("tab-guia"), btn = d.getElementById("tab-btn-guia");
@@ -24,7 +24,10 @@ test("la guía es una tercera pestaña: oculta por defecto, se abre con la pesta
   assert.equal(btn.getAttribute("aria-selected"), "true");
   d.getElementById("tab-btn-infografia").click();
   assert.equal(pan.hidden, true);
-  d.getElementById("openGuia").click();
+  d.querySelector('.toolCard--cal [data-goto-tab="guia"]').click();
+  assert.equal(pan.hidden, false);
+  d.getElementById("tab-btn-inicio").click();
+  d.querySelector('.siteFooter [data-goto-tab="guia"]').click();
   assert.equal(pan.hidden, false);
   assert.deepEqual(dom.errors, []);
   dom.window.close();
@@ -107,5 +110,6 @@ test("imprimir la guía activa el modo de impresión de la guía y lo limpia en 
 test("css de la guía: respeta [hidden] y define la impresión de solo la guía", () => {
   const css = fs.readFileSync(path.join(root, "css/guia.css"), "utf8");
   assert.match(css, /\.guia\[hidden\]\s*\{\s*display\s*:\s*none\s*!important/);
-  assert.match(css, /body\[data-printing="guia"\] \.pageShell > :not\(#tab-guia\)\{display:none!important\}/);
+  assert.match(css, /body\[data-printing="guia"\] main > :not\(#tab-guia\)\{display:none!important\}/);
+  assert.match(css, /body\[data-printing="guia"\] \.pageShell > :not\(main\)\{display:none!important\}/);
 });

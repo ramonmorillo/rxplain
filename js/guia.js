@@ -1,12 +1,6 @@
 (function () {
   "use strict";
-  // Pestaña «Guía de uso»: acceso desde la cabecera e impresión/PDF de la propia guía.
-
-  function abrir() {
-    if (window.RxTabs) window.RxTabs.show("guia");
-    var t = document.getElementById("guia-titulo");
-    if (t && typeof t.scrollIntoView === "function") { try { t.scrollIntoView({ block: "start" }); } catch (e) { /* sin scroll */ } }
-  }
+  // Pestaña «Guía de uso»: impresión/PDF de la propia guía (el acceso lo gestiona tabs.js con data-goto-tab).
 
   function limpiar() {
     window.removeEventListener("afterprint", limpiar);
@@ -20,8 +14,6 @@
   }
 
   function init() {
-    var a = document.getElementById("openGuia");
-    if (a) a.addEventListener("click", abrir);
     var p = document.getElementById("guiaImprimir");
     if (p) p.addEventListener("click", imprimir);
     // Si afterprint no llega, cambiar de pestaña no deja el modo impresión de la guía puesto.

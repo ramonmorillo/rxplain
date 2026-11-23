@@ -249,7 +249,8 @@
 
   $("addMed").addEventListener("click", addCurrentMedication);
   $("loadExample").addEventListener("click", loadExampleData);
-  $("loadExampleHero").addEventListener("click", loadExampleData);
+  // Desde la portada, cargar el ejemplo lleva a la Infografía para verlo.
+  $("loadExampleHero").addEventListener("click", ()=>{ if (window.RxTabs) window.RxTabs.show("infografia"); loadExampleData(); });
 
   $("generate").addEventListener("click", ()=>{
     if (meds.length===0){ alert("Añade al menos 1 medicamento."); return; }

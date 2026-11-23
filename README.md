@@ -4,6 +4,20 @@ Herramienta web estática para generar una **infografía de la farmacoterapia de
 
 No requiere servidor ni instalación: es HTML, CSS y JavaScript sin dependencias de ejecución, y funciona abriendo `index.html` directamente desde disco (`file://`) en Chrome o Edge.
 
+## Versión y autoría
+
+**RxPlain 2.0** (noviembre de 2026) · creada en febrero de 2026 por **Ramón Morillo** (Farmacia Hospitalaria). © 2026 Ramón Morillo. Todos los derechos reservados; uso gratuito para fines profesionales y docentes (ver el **Aviso legal** dentro de la herramienta: pie de página → «Aviso legal y propiedad»). El texto legal es orientativo; conviene revisarlo con el servicio jurídico o el delegado de protección de datos antes de un uso institucional.
+
+## Diseño (v2.0)
+
+- **Portada** con las dos herramientas diferenciadas —**Infografía** (acento teal) y **Calendario** (acento índigo)—, barra superior fija con las pestañas Inicio · Infografía · Calendario · Guía de uso, y pie con autoría, fechas, versión, copyright y enlaces al aviso legal y a la privacidad. Enlaces directos: `index.html#calendario`, `#infografia`, `#guia`, `#legal`.
+- **Calendario en dos columnas** (pauta y controles a la izquierda; avisos y meses a la derecha).
+- Los estilos de la capa visual están en `css/tema.css` (se carga la última). **No cambia lo que se imprime**: la infografía generada y la hoja del paciente conservan su tipografía y sus tokens de la v1 (bloque «superficies que se imprimen» de `css/tema.css`).
+- Accesibilidad: enlace «Saltar al contenido», hitos (`header`, `nav`, `main`, `footer`), foco visible, contraste WCAG AA comprobado por test, respeto de `prefers-reduced-motion`, objetivos táctiles de 44 px y barra de pestañas sin desbordar de 320 px a escritorio.
+- Sin recursos externos (ni fuentes, ni scripts, ni analítica): la tipografía es la del sistema. **No hay contador de visitas** (se decidió no incluirlo para mantener la declaración de privacidad: ninguna comunicación de red salvo las consultas a CIMA).
+
+**Cómo comprobar que la impresión no ha cambiado** al tocar estilos: generar el mismo caso (infografía con «Cargar ejemplo»; hoja del paciente con una pauta fija) en la versión anterior y en la nueva, imprimir ambos a PDF con Chromium (`page.pdf` con `emulateMedia({media:'print'})`) y comparar texto (`pdftotext`), nº de páginas y píxeles (`pdftoppm` + diferencia de imágenes). En la v2.0 ambos documentos salen idénticos (0 píxeles con diferencia apreciable).
+
 ## Pestañas
 
 ### Infografía
@@ -65,7 +79,8 @@ npm test
 
 ```
 index.html                 Página única; carga los scripts
-css/rxplain.css            Estilos de la infografía
+css/rxplain.css            Estilos base y de la infografía (la generada se imprime con ellos)
+css/tema.css               Capa visual v2.0: tokens, barra superior, portada, formularios, pie
 css/calendario.css         Estilos de la pestaña Calendario y de la hoja impresa
 css/guia.css               Estilos de la pestaña Guía de uso
 js/infografia.js           Infografía y consulta opcional a CIMA
