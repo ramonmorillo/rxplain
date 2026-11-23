@@ -9,6 +9,11 @@ No requiere servidor ni instalación: es HTML, CSS y JavaScript sin dependencias
 ### Infografía
 Genera una infografía imprimible de la medicación del paciente. Incluye una consulta opcional a CIMA/AEMPS (ver Privacidad).
 
+### Guía de uso
+Tercera pestaña (también accesible desde el botón «Guía de uso» de la cabecera): explica cómo trabajar con la herramienta —Infografía, Calendario, informe y hoja del paciente—, con ejemplos completos, mensajes frecuentes y límites. Se puede imprimir o guardar en PDF por sí sola (botón de la propia guía). El contenido está en `index.html` (`#tab-guia`), los estilos en `css/guia.css` y el pequeño script en `js/guia.js`.
+
+**Mantenerla al día:** cada nombre de botón o campo citado en la guía va marcado con `<b class="ui">…</b>`; `tests/guia.test.mjs` comprueba que todas esas etiquetas existen en la herramienta, de modo que si se renombra algo en la interfaz el test falla hasta actualizar la guía.
+
 ### Calendario
 - La **pauta se define en la propia pestaña Calendario** (no hay catálogo de esquemas) y el calendario se recalcula al escribir: fármacos, dosis, lugar, días, fecha de inicio y número de ciclos (o de dosis).
 - Dos tipos de pauta:
@@ -62,10 +67,12 @@ npm test
 index.html                 Página única; carga los scripts
 css/rxplain.css            Estilos de la infografía
 css/calendario.css         Estilos de la pestaña Calendario y de la hoja impresa
+css/guia.css               Estilos de la pestaña Guía de uso
 js/infografia.js           Infografía y consulta opcional a CIMA
 js/tabs.js                 Pestañas
 js/cima.js                 Cliente CIMA/AEMPS (búsqueda y apartado 4.2; `fetch` inyectable)
 js/farmacos-view.js        Sub-pestaña Fármacos
+js/guia.js                 Pestaña Guía de uso (acceso e impresión)
 js/farmaco-combo.js        Desplegable de fármacos (CIMA) del campo «Fármaco» de la pauta
 js/schedule-engine.js      Motor de calendarización (fechas, festivos)
 js/regimen-data.js         Validador de la forma de una pauta

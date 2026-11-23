@@ -1,0 +1,36 @@
+/* Pestaña «Guía de uso» */
+.guia[hidden]{display:none!important}
+.guia{max-width:900px;margin:0 auto;padding:0 16px 40px}
+.guiaDoc{background:var(--surface,#fff);border:1px solid var(--border,#dbe6ea);border-radius:14px;padding:24px 28px;line-height:1.55;color:var(--text,#102033)}
+.guiaCab h2{margin:0 0 8px;font-size:1.7rem}
+.guiaLead{font-size:1.05rem;color:var(--muted,#607187);margin:0 0 14px}
+.guiaDoc h3{margin:30px 0 8px;font-size:1.3rem;color:var(--primary,#0f6f8c);border-bottom:2px solid var(--bg-strong,#dff3f2);padding-bottom:4px}
+.guiaDoc h4{margin:22px 0 6px;font-size:1.05rem}
+.guiaDoc p,.guiaDoc li{font-size:.98rem}
+.guiaDoc ul,.guiaDoc ol{padding-left:1.4em}
+.guiaDoc li{margin:4px 0}
+.guiaToc{background:var(--surface-soft,#f8fbfd);border:1px solid var(--border,#dbe6ea);border-radius:10px;padding:10px 18px;margin:16px 0}
+.guiaToc h3{margin:6px 0;border:0;font-size:1rem;color:var(--text,#102033)}
+.guiaToc ol{margin:4px 0}
+.guiaToc a{color:var(--primary,#0f6f8c)}
+.guiaAviso{background:#fff7e0;border:1px solid #e0b84c;border-radius:8px;padding:10px 14px}
+/* Etiquetas de la interfaz citadas en la guía */
+.guiaDoc .ui{display:inline;padding:0 5px;border:1px solid var(--border,#dbe6ea);border-radius:5px;background:var(--surface-soft,#f8fbfd);font-weight:700;color:var(--primary,#0f6f8c)}
+.guiaDoc code{background:#eef3f5;padding:1px 5px;border-radius:4px;font-size:.92em}
+.guiaTabla{width:100%;border-collapse:collapse;margin:10px 0;font-size:.93rem}
+.guiaTabla th,.guiaTabla td{border:1px solid var(--border,#dbe6ea);padding:7px 10px;text-align:left;vertical-align:top}
+.guiaTabla th{background:var(--bg-strong,#dff3f2)}
+.guiaPie{margin-top:28px;border-top:1px solid var(--border,#dbe6ea);padding-top:12px;color:var(--muted,#607187);font-size:.9rem}
+@media (max-width:640px){
+  .guiaDoc{padding:16px 14px}
+  .guiaTabla{display:block;overflow-x:auto}
+}
+@media print{
+  body[data-printing="guia"]{background:#fff!important}
+  body[data-printing="guia"] .pageShell > :not(#tab-guia){display:none!important}
+  body[data-printing="guia"] #tab-guia{display:block!important;max-width:none;padding:0;margin:0}
+  body[data-printing="guia"] .guiaDoc{border:0;padding:0}
+  body[data-printing="guia"] .guiaDoc h3,body[data-printing="guia"] .guiaDoc h4{break-after:avoid}
+  body[data-printing="guia"] .guiaTabla tr,body[data-printing="guia"] .guiaAviso{break-inside:avoid}
+  body[data-printing="guia"] .guiaDoc a{color:#000;text-decoration:none}
+}

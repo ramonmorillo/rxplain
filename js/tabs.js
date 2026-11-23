@@ -1,6 +1,6 @@
 (function () {
   "use strict";
-  var NAMES = ["infografia", "calendario"];
+  var NAMES = ["infografia", "calendario", "guia"];
 
   function show(name) {
     if (NAMES.indexOf(name) === -1) return;

@@ -51,13 +51,16 @@ test("las teclas ← → mueven el foco entre pestañas", async () => {
   const { btnI, btnC, d } = els(dom);
   const key = (el, k) =>
     el.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: k, bubbles: true }));
+  const btnG = d.getElementById("tab-btn-guia");
   btnI.focus();
   key(btnI, "ArrowRight");
   assert.equal(d.activeElement, btnC);
   key(btnC, "ArrowRight");
+  assert.equal(d.activeElement, btnG);
+  key(btnG, "ArrowRight");
   assert.equal(d.activeElement, btnI);
   key(btnI, "ArrowLeft");
-  assert.equal(d.activeElement, btnC);
+  assert.equal(d.activeElement, btnG);
   dom.window.close();
 });
 

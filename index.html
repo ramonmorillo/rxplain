@@ -7,6 +7,7 @@
 
   <link rel="stylesheet" href="css/rxplain.css">
   <link rel="stylesheet" href="css/calendario.css">
+  <link rel="stylesheet" href="css/guia.css">
 </head>
 
 <body>
@@ -28,6 +29,7 @@
           <div class="heroActions">
             <a class="btn large" href="#patientProfile">Comenzar</a>
             <button class="btn secondary large" id="loadExampleHero" type="button">Cargar ejemplo</button>
+            <button class="btn secondary large" id="openGuia" type="button">Guía de uso</button>
           </div>
         </div>
         <aside class="heroPanel" aria-label="Valor de RxPlain">
@@ -41,6 +43,7 @@
     <nav role="tablist" id="tabs" class="tabNav noPrint" aria-label="Secciones">
       <button type="button" role="tab" id="tab-btn-infografia" aria-controls="tab-infografia" aria-selected="true">Infografía</button>
       <button type="button" role="tab" id="tab-btn-calendario" aria-controls="tab-calendario" aria-selected="false" tabindex="-1">Calendario</button>
+      <button type="button" role="tab" id="tab-btn-guia" aria-controls="tab-guia" aria-selected="false" tabindex="-1">Guía de uso</button>
     </nav>
 
     <main class="mainLayout" id="tab-infografia" role="tabpanel" aria-labelledby="tab-btn-infografia">
@@ -173,6 +176,204 @@
       <div id="calendarioRoot"></div>
     </section>
 
+    <section id="tab-guia" class="guia" role="tabpanel" aria-labelledby="tab-btn-guia" hidden>
+      <article class="guiaDoc">
+        <header class="guiaCab">
+          <p class="sectionKicker">Guía de uso</p>
+          <h2 id="guia-titulo">Cómo trabajar con RxPlain</h2>
+          <p class="guiaLead">Esta guía explica, paso a paso, cómo preparar una <b>infografía</b> del tratamiento y un <b>calendario con hoja imprimible</b> para el paciente. Está pensada para farmacéuticos de hospital; no hace falta formación técnica.</p>
+          <p class="noPrint"><button type="button" class="btn secondary" id="guiaImprimir">Imprimir o guardar esta guía en PDF</button></p>
+        </header>
+
+        <nav class="guiaToc noPrint" aria-label="Índice de la guía">
+          <h3>Contenido</h3>
+          <ol>
+            <li><a href="#g-que-es">Qué es RxPlain y qué no hace</a></li>
+            <li><a href="#g-antes">Antes de empezar</a></li>
+            <li><a href="#g-infografia">Infografía: explicar el tratamiento</a></li>
+            <li><a href="#g-calendario">Calendario: cuándo toma y cuándo viene</a>
+              <ol>
+                <li><a href="#g-pauta">Paso 1. Definir la pauta</a></li>
+                <li><a href="#g-fechas">Paso 2. Fechas, ciclos y retrasos</a></li>
+                <li><a href="#g-leer">Cómo leer el calendario y sus avisos</a></li>
+                <li><a href="#g-validar">Paso 3. Validar la pauta</a></li>
+                <li><a href="#g-informe">Paso 4. Informe y hoja del paciente</a></li>
+                <li><a href="#g-nuevo">Siguiente paciente</a></li>
+              </ol></li>
+            <li><a href="#g-ejemplos">Tres ejemplos completos</a></li>
+            <li><a href="#g-problemas">Mensajes frecuentes y qué hacer</a></li>
+            <li><a href="#g-limites">Límites y buenas prácticas</a></li>
+            <li><a href="#g-teclado">Teclado y accesibilidad</a></li>
+          </ol>
+        </nav>
+
+        <section id="g-que-es" aria-labelledby="g-que-es-t">
+          <h3 id="g-que-es-t">1. Qué es RxPlain y qué no hace</h3>
+          <p>RxPlain es una herramienta web gratuita que ayuda al farmacéutico de hospital a comunicar el tratamiento al paciente. Tiene dos usos:</p>
+          <ul>
+            <li><b>Infografía</b>: convierte la información de cada medicamento en un documento claro, priorizado y listo para imprimir.</li>
+            <li><b>Calendario</b>: coloca en fechas concretas las tomas y las visitas al hospital y genera una <b>hoja del paciente</b> (A4) con las próximas administraciones, el calendario mensual y la medicación en casa.</li>
+          </ul>
+          <p class="guiaAviso"><b>Qué no hace.</b> No sustituye el criterio clínico, <b>no calcula ni recomienda dosis</b> (la dosis es un texto que escribe usted y se muestra tal cual) y no valida pautas por sí sola. Todo lo que genera debe revisarlo el farmacéutico antes de entregarlo.</p>
+        </section>
+
+        <section id="g-antes" aria-labelledby="g-antes-t">
+          <h3 id="g-antes-t">2. Antes de empezar</h3>
+          <ul>
+            <li><b>No se guarda nada.</b> No hay cuenta ni base de datos: lo que escriba solo existe mientras la página esté abierta. Al recargar o cerrar, se pierde. Para conservar un resultado, imprímalo o guárdelo en PDF.</li>
+            <li><b>Consultas a CIMA/AEMPS.</b> Cuando usa el buscador de medicamentos, se envía a CIMA <b>solo el texto del fármaco</b> que escribe (o el número de registro del medicamento elegido). Nunca se envían datos del paciente. El resto de la herramienta no hace peticiones de red.</li>
+            <li><b>Navegador.</b> Está pensada para Chrome y Edge, y la pantalla se adapta al móvil. También funciona abriendo el archivo <code>index.html</code> directamente desde el disco.</li>
+            <li><b>Pautas «pendientes».</b> Cualquier pauta del Calendario queda marcada como <b>pendiente de validación</b> hasta que usted lo confirme (ver <a href="#g-validar">Paso 3</a>). Mientras tanto, la hoja lleva el aviso «NO ENTREGAR AL PACIENTE».</li>
+          </ul>
+        </section>
+
+        <section id="g-infografia" aria-labelledby="g-infografia-t">
+          <h3 id="g-infografia-t">3. Infografía: explicar el tratamiento</h3>
+          <p>Está en la pestaña <b class="ui">Infografía</b>. Se rellena de arriba abajo en cinco bloques:</p>
+          <ol>
+            <li><b>Perfil del paciente.</b> Edad, tipo de proceso, alfabetización en salud, contexto, indicación, objetivos y objetivo educativo. Estos datos orientan el tono y la priorización del documento.</li>
+            <li><b>Personalización profesional</b> (opcional). Nombre del farmacéutico, servicio o centro, contacto y fecha. Lo que deje en blanco no aparece en la infografía.</li>
+            <li><b>Tratamiento completo.</b> Para cada medicamento: nombre, para qué sirve en este paciente, cómo se toma, mensaje clave, qué es normal notar, cuándo avisar y notas. Si lo desea, escriba al menos 3 letras en <b class="ui">Buscar medicamento en CIMA/AEMPS (opcional)</b> para ayudarse con los datos oficiales. Pulse <b class="ui">Añadir medicamento</b> por cada uno.</li>
+            <li><b>Medicamentos añadidos.</b> Revise la lista; cada tarjeta resume lo introducido.</li>
+            <li><b>Generación.</b> Pulse <b class="ui">Generar infografía</b>, revísela y use <b class="ui">Imprimir / Guardar PDF</b> (se activa una vez generada).</li>
+          </ol>
+          <p><b class="ui">Cargar ejemplo</b> rellena un caso de muestra para ver cómo queda, y <b class="ui">Borrar todo</b> vacía el formulario.</p>
+        </section>
+
+        <section id="g-calendario" aria-labelledby="g-calendario-t">
+          <h3 id="g-calendario-t">4. Calendario: cuándo toma y cuándo viene</h3>
+          <p>Está en la pestaña <b class="ui">Calendario</b>, que tiene tres secciones: <b class="ui">Fármacos</b> (buscar en CIMA), <b class="ui">Calendario</b> (definir la pauta y ver el resultado) e <b class="ui">Informe del paciente</b> (hoja para imprimir). El calendario se actualiza <b>en directo</b> mientras escribe; no hay botón de «calcular».</p>
+
+          <h4 id="g-pauta">Paso 1. Definir la pauta</h4>
+          <p>Hay tres maneras de empezar; todas terminan en el mismo formulario <b class="ui">Pauta</b>:</p>
+          <ol>
+            <li><b>Desde el propio campo «Fármaco» (la más rápida).</b> Escriba al menos 3 letras del medicamento. Aparece un desplegable con los medicamentos de CIMA: elija la <b>presentación</b> que corresponda. RxPlain lee su ficha técnica (apartado 4.2) y rellena una <b>pauta tentativa</b>, mostrando la frase de la ficha de la que sale. Si la ficha recoge varias pautas, un selector (<b class="ui">Propuesta de la ficha</b>) permite cambiar de una a otra; por defecto se elige la que menciona la concentración de la presentación marcada. El cursor queda en la <b>dosis</b>, que debe escribir usted.</li>
+            <li><b>Desde la sección Fármacos.</b> Busque el medicamento, pulse <b class="ui">Ver 4.2</b> en el resultado, luego <b class="ui">Proponer pauta</b> y, en la propuesta correcta, <b class="ui">Usar en el calendario</b>.</li>
+            <li><b>A mano.</b> Rellene el formulario directamente, o parta de uno de los ejemplos: <b class="ui">Biológico cada N semanas</b> u <b class="ui">Oral días 1–21 de 28</b>.</li>
+          </ol>
+          <p class="guiaAviso">Las propuestas de la ficha son un <b>borrador automático</b>: solo leen la <i>frecuencia</i> (no dosis, poblaciones ni condiciones especiales). Compruebe siempre la frase que se muestra contra la ficha técnica oficial.</p>
+
+          <p><b>Campos del formulario</b></p>
+          <table class="guiaTabla">
+            <thead><tr><th>Campo</th><th>Qué poner</th></tr></thead>
+            <tbody>
+              <tr><td><b class="ui">Nombre de la pauta (opcional)</b></td><td>Si lo deja vacío se usa el nombre del primer fármaco.</td></tr>
+              <tr><td><b class="ui">Tipo de pauta</b></td><td><b>Por ciclos</b>: un ciclo que se repite cada N días (p. ej. días 1 a 21 de 28). <b>Por intervalo</b>: dosis sueltas separadas por un número de días (p. ej. «0, 14, 28 y luego cada 56»).</td></tr>
+              <tr><td><b class="ui">Duración del ciclo (días)</b></td><td>Solo en «por ciclos». Entre 1 y 366.</td></tr>
+              <tr><td><b class="ui">Fármaco</b>, <b class="ui">Abreviatura (opcional)</b></td><td>La abreviatura es la que se ve dentro de cada día del calendario (máx. 8 caracteres).</td></tr>
+              <tr><td><b class="ui">Dosis (texto libre)</b></td><td>Obligatoria. Por ejemplo «40 mg». Se muestra tal cual; no se calcula nada.</td></tr>
+              <tr><td><b class="ui">Lugar</b></td><td>Casa (oral), Casa (inyección) u Hospital. Las visitas al hospital se destacan y generan avisos de conflicto.</td></tr>
+              <tr><td><b class="ui">Veces al día (1–6)</b></td><td>Número de tomas diarias.</td></tr>
+              <tr><td><b class="ui">Horas (opcional)</b></td><td>Por ejemplo <code>08:00, 20:00</code> (formato 24 h). Al escribirlas, «Veces al día» se ajusta solo; si no cuadran, se avisa. RxPlain <b>nunca inventa horas</b>.</td></tr>
+              <tr><td><b class="ui">Días del ciclo (1 = primer día del ciclo)</b></td><td>Solo en «por ciclos». Lista o rango: <code>1-21</code>, <code>1,8,15</code>, <code>1-3, 8</code>.</td></tr>
+              <tr><td><b class="ui">Dosis iniciales: días desde el inicio (0 = día de inicio)</b>, <b class="ui">Primer mantenimiento: días desde el inicio (0 = día de inicio)</b>, <b class="ui">Repetir cada (días)</b></td><td>Solo en «por intervalo». Ejemplo: dosis iniciales <code>0,14,28</code>, primer mantenimiento <code>56</code>, repetir cada <code>56</code>. El primer mantenimiento lo fija usted según la ficha.</td></tr>
+            </tbody>
+          </table>
+          <p>Con <b class="ui">Añadir fármaco</b> incorpora más medicamentos a la misma pauta (todos comparten tipo y duración de ciclo); con <b class="ui">Quitar fármaco</b> elimina una fila. Mientras la pauta esté incompleta, debajo del formulario se indica <b>exactamente qué falta</b> y no se pinta el calendario.</p>
+
+          <h4 id="g-fechas">Paso 2. Fechas, ciclos y retrasos</h4>
+          <ul>
+            <li><b class="ui">Fecha de inicio</b>: el día 1 de la pauta.</li>
+            <li><b class="ui">Ciclos</b> (o <b class="ui">Dosis</b> en pautas por intervalo): cuántos calcular, de 1 a 60. Si escribe un valor fuera de rango o no entero, se ajusta y se avisa de lo que se ha calendarizado.</li>
+            <li><b class="ui">Pauta indefinida (se continúa hasta que su médico indique otra cosa)</b>: para tratamientos sin fecha de fin. El calendario se calcula hasta la fecha de <b class="ui">Calendario hasta</b> (por defecto 31/12/2027) y el número de ciclos queda automático. Una propuesta «diaria» de la ficha activa esta casilla y se representa como ciclos de 28 días diarios.</li>
+            <li><b class="ui">Retraso C2</b>, <b class="ui">Retraso C3</b>… (días): si un ciclo se retrasa, escriba los días de retraso en ese ciclo y el resto de ciclos se desplaza. Solo en pautas por ciclos.</li>
+          </ul>
+
+          <h4 id="g-leer">Cómo leer el calendario y sus avisos</h4>
+          <ul>
+            <li>Cada mes aparece en su cuadrícula. <b>C1, C2…</b> marcan el inicio de cada ciclo. Dentro de cada día, una etiqueta con la abreviatura de cada fármaco; debajo, sus horas, o <b>×N</b> si hay varias tomas sin hora.</li>
+            <li>Los días con visita al hospital llevan borde grueso y la etiqueta HOSP./HOSPITAL. Los fines de semana se ven en gris y los festivos en rojo claro.</li>
+            <li><b>Visitas al hospital en fin de semana o festivo</b>: lista las citas que caen en sábado, domingo o festivo, para reprogramarlas. Conoce los festivos nacionales, el Día de Andalucía y Jueves y Viernes Santo; <b>no incluye otros festivos autonómicos ni locales</b>, que debe revisar usted.</li>
+            <li><b>Calendario recortado hasta…</b>: se alcanzó el máximo de 60 ciclos antes de llegar a la fecha indicada.</li>
+            <li><b>Esquema pendiente de validación</b>: ver el paso siguiente.</li>
+          </ul>
+
+          <h4 id="g-validar">Paso 3. Validar la pauta</h4>
+          <p>Una pauta nueva siempre es <b>pendiente</b>: la hoja del paciente lleva en cabecera y en cada mes el aviso «ESQUEMA PENDIENTE DE VALIDACIÓN — NO ENTREGAR AL PACIENTE». Cuando haya revisado la pauta frente a su fuente (ficha técnica, guía o protocolo del servicio), marque <b class="ui">Pauta revisada y validada por el farmacéutico (si no se marca, la hoja lleva el aviso «NO ENTREGAR AL PACIENTE»)</b>. Así queda registrada como validada con la fecha de hoy y desaparece el aviso. Es una decisión consciente suya: la herramienta no puede validar por usted.</p>
+
+          <h4 id="g-informe">Paso 4. Informe y hoja del paciente</h4>
+          <p>En <b class="ui">Informe del paciente</b>:</p>
+          <ul>
+            <li><b class="ui">Identificador del paciente (opcional, no se guarda)</b>: aparece en la hoja si lo rellena.</li>
+            <li><b class="ui">Hospital / centro</b>, <b class="ui">Farmacéutico/a responsable</b> y <b class="ui">Teléfono de contacto</b>: si los deja vacíos se usan los de la pestaña Infografía.</li>
+            <li>La <b>vista previa</b> es exactamente lo que se imprimirá: <i>Sus próximas administraciones</i> (las 8 siguientes), calendario mensual, días que el paciente viene al hospital y medicación en casa (con días y horas).</li>
+            <li>Pulse <b class="ui">Imprimir hoja del paciente</b> y elija imprimir o «Guardar como PDF». Compruebe que el aviso de pendiente (si lo hay) es legible, también en blanco y negro.</li>
+          </ul>
+
+          <h4 id="g-nuevo">Siguiente paciente</h4>
+          <p><b class="ui">↺ Empezar de nuevo</b> borra los datos del paciente, la fecha, los ciclos, los retrasos y las búsquedas, y <b>conserva la pauta</b> para reutilizarla. Si marca <b class="ui">Borrar también la pauta y los datos del profesional</b>, se vacía todo. Úselo siempre al terminar en un equipo compartido.</p>
+        </section>
+
+        <section id="g-ejemplos" aria-labelledby="g-ejemplos-t">
+          <h3 id="g-ejemplos-t">5. Tres ejemplos completos</h3>
+          <h4>A. Un biológico cada 14 días, partiendo de CIMA</h4>
+          <ol>
+            <li>En Calendario, escriba <code>praluent</code> en «Fármaco» y elija la presentación de 75 mg.</li>
+            <li>Se rellena una pauta por intervalo (dosis el día 0 y repetición cada 14 días) con la frase «75 mg 1 vez cada 2 semanas». Compruébela con la ficha.</li>
+            <li>Escriba la dosis (p. ej. «75 mg») y la fecha de inicio. Aparece el calendario con una dosis cada 14 días.</li>
+            <li>Marque la validación si procede y vaya a Informe del paciente.</li>
+          </ol>
+          <h4>B. Un oral 21 de cada 28 días</h4>
+          <ol>
+            <li>Pulse <b class="ui">Oral días 1–21 de 28</b>.</li>
+            <li>Cambie el nombre del fármaco, escriba la dosis y ajuste el nº de ciclos y la fecha de inicio.</li>
+            <li>Si un ciclo se retrasa, anote los días en «Retraso C2», «Retraso C3»…</li>
+          </ol>
+          <h4>C. Dos tomas al día con hora</h4>
+          <ol>
+            <li>Pauta por ciclos, duración 28, días <code>1-28</code>, y marque <b class="ui">Pauta indefinida (se continúa hasta que su médico indique otra cosa)</b>.</li>
+            <li>En «Horas (opcional)» escriba <code>08:00, 20:00</code>; «Veces al día» pasa a 2.</li>
+            <li>Cada día muestra las dos horas, y la hoja las incluye en las próximas administraciones y en la medicación en casa.</li>
+          </ol>
+        </section>
+
+        <section id="g-problemas" aria-labelledby="g-problemas-t">
+          <h3 id="g-problemas-t">6. Mensajes frecuentes y qué hacer</h3>
+          <table class="guiaTabla">
+            <thead><tr><th>Lo que ve</th><th>Qué significa y qué hacer</th></tr></thead>
+            <tbody>
+              <tr><td>«Complete la pauta (fármaco, dosis y días) para ver el calendario»</td><td>Falta algún dato. Lea el mensaje debajo del formulario: dice cuál.</td></tr>
+              <tr><td>«Escriba la dosis de…»</td><td>La dosis es obligatoria y la escribe usted (texto libre).</td></tr>
+              <tr><td>«Las horas de… no coinciden con las veces al día»</td><td>Ponga tantas horas como veces al día, o ajuste «Veces al día».</td></tr>
+              <tr><td>«El día N de… está fuera del ciclo»</td><td>Un día supera la duración del ciclo. Amplíe la duración o corrija los días.</td></tr>
+              <tr><td>«Sin resultados en CIMA» / «No se pudo consultar CIMA»</td><td>El nombre no existe o la conexión (o el filtro de red del hospital) bloquea CIMA. Puede escribir el fármaco y la pauta a mano.</td></tr>
+              <tr><td>No aparece el desplegable al escribir</td><td>Escriba al menos 3 letras y espere un instante. Si sigue sin aparecer, es la conexión con CIMA.</td></tr>
+              <tr><td>«Valor de Ciclos ajustado»</td><td>El número escrito no era válido (admite enteros de 1 a 60); se calculó el que indica el aviso.</td></tr>
+              <tr><td>«Calendario recortado hasta…»</td><td>Se llegó al máximo de 60 ciclos. Reduzca el periodo o calcule por tramos.</td></tr>
+              <tr><td>«La fecha de inicio es posterior a «Calendario hasta»»</td><td>Corrija una de las dos fechas.</td></tr>
+              <tr><td>No puedo imprimir la hoja</td><td>Necesita una pauta completa y una fecha de inicio válida.</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section id="g-limites" aria-labelledby="g-limites-t">
+          <h3 id="g-limites-t">7. Límites y buenas prácticas</h3>
+          <ul>
+            <li><b>Verifique siempre</b> las propuestas de la ficha contra la ficha técnica oficial: son un borrador automático.</li>
+            <li><b>Una pauta, un tipo.</b> Todos los fármacos de una misma pauta comparten tipo (ciclos o intervalo) y duración de ciclo. Para tratamientos con fases distintas, prepare pautas separadas.</li>
+            <li><b>Festivos.</b> Revise manualmente los festivos autonómicos y locales de su hospital.</li>
+            <li><b>Horas.</b> Son etiquetas del reloj del día indicado: no hay zonas horarias ni cambio de hora que calcular, y una toma a las 00:30 pertenece al día de su fecha. El calendario mensual impreso en la hoja no muestra las horas; están en las tablas.</li>
+            <li><b>Privacidad en equipos compartidos.</b> Nada se guarda, pero lo escrito sigue en pantalla hasta que se recarga: use <b class="ui">↺ Empezar de nuevo</b> o cierre la pestaña.</li>
+            <li><b>Conservar un resultado.</b> Imprima o guarde en PDF; la herramienta no guarda historial.</li>
+          </ul>
+        </section>
+
+        <section id="g-teclado" aria-labelledby="g-teclado-t">
+          <h3 id="g-teclado-t">8. Teclado y accesibilidad</h3>
+          <ul>
+            <li><b>Pestañas y secciones:</b> con el foco en una pestaña, las flechas ← → cambian a la anterior o la siguiente.</li>
+            <li><b>Desplegable de fármacos:</b> ↓ ↑ para moverse por las opciones, Intro para elegir y Esc para cerrarlo.</li>
+            <li>Las etiquetas de los campos están asociadas a ellos, los avisos se anuncian a lectores de pantalla y la hoja del paciente no depende solo del color (usa símbolos y texto).</li>
+          </ul>
+        </section>
+
+        <footer class="guiaPie">
+          <p>Guía actualizada el 23 de noviembre de 2026. RxPlain ha sido creada por Ramón Morillo como herramienta de apoyo para la Farmacia Hospitalaria; no sustituye el juicio clínico del farmacéutico ni la información oficial de la ficha técnica o el prospecto.</p>
+          <p class="noPrint"><a href="#guia-titulo">Volver al principio</a></p>
+        </footer>
+      </article>
+    </section>
+
     <div id="hojaPaciente" hidden></div>
 
     <footer class="siteFooter">
@@ -198,6 +399,7 @@
 <script src="js/calendario-view.js"></script>
 <script src="js/hoja-paciente.js"></script>
 <script src="js/tabs.js"></script>
+<script src="js/guia.js"></script>
 <script src="js/infografia.js"></script>
 </body>
 </html>
