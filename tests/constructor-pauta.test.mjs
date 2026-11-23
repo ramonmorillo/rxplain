@@ -38,11 +38,24 @@ test("ciclos: genera regimen válido, pendiente y registrado", () => {
   assert.equal(RxData.get(r.id), r);
 });
 
-test("ids propia-<n> no se repiten", () => {
+test("ids propia-<n> no se repiten entre pautas distintas", () => {
+  reset();
+  const a = RxBuilder.buildRegimen(formCiclos());
+  const b = RxBuilder.buildRegimen(formCiclos({ nombre: "Mi oral 2" }));
+  assert.notEqual(a.id, b.id);
+});
+
+test("I-3: una pauta idéntica a otra ya creada se reutiliza, no se duplica", () => {
   reset();
   const a = RxBuilder.buildRegimen(formCiclos());
   const b = RxBuilder.buildRegimen(formCiclos());
-  assert.notEqual(a.id, b.id);
+  assert.equal(b, a);
+  assert.equal(RxData.list().filter((r) => /^propia-/.test(r.id)).length, 1);
+  // cualquier diferencia de contenido crea otra pauta
+  const c = RxBuilder.buildRegimen(formCiclos({ items: [item({ dosis: "10 mg" })] }));
+  const d = RxBuilder.buildRegimen(formCiclos({ ciclos_defecto: 4 }));
+  const e = RxBuilder.buildRegimen(formCiclos({ indefinida: true }));
+  assert.equal(new Set([a.id, c.id, d.id, e.id]).size, 4);
 });
 
 test("ejemplo oral días 1-21 de 28 produce las fechas esperadas", () => {

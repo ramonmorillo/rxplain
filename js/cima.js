@@ -140,7 +140,8 @@
             out.push({
               nregistro: nreg,
               nombre: str(m.nombre),
-              pactivos: str(m.pactivos),
+              // La lista de CIMA no incluye «pactivos»; el VTM (p. ej. «adalimumab») es el principio activo virtual.
+              pactivos: str(m.pactivos) || str(m.vtm && typeof m.vtm === "object" ? m.vtm.nombre : m.vtm),
               formaFarmaceutica: str(ff && typeof ff === "object" ? ff.nombre : ff),
               labtitular: str(m.labtitular),
               url: fichaUrl(nreg)

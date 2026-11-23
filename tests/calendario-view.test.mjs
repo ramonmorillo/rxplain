@@ -391,3 +391,15 @@ test("sin esquemas que coincidan: ofrece buscar en CIMA (precarga el nombre) y c
   assert.deepEqual(dom.errors, []);
   dom.window.close();
 });
+
+test("I-4: la etiqueta de hospital tiene versión corta para pantallas estrechas", async () => {
+  const dom = await loadPage();
+  const d = setup(dom, "mieloma-drd", "2026-11-23", 3);
+  const etq = d.querySelector('#cal_meses .dia-hospital[data-date="2026-11-23"] .etq-hospital');
+  assert.ok(etq);
+  assert.equal(etq.querySelector(".etq-largo").textContent, "HOSPITAL");
+  const corto = etq.querySelector(".etq-corto");
+  assert.equal(corto.textContent, "HOSP.");
+  assert.equal(corto.getAttribute("aria-hidden"), "true");
+  dom.window.close();
+});
