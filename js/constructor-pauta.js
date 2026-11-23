@@ -7,10 +7,9 @@
 })(typeof self !== "undefined" ? self : this, function (RxData) {
   "use strict";
 
-  var AREAS = ["Hematología", "Oncología", "Inmunomediadas"];
   var LUGARES = ["hospital", "casa", "casa_inyeccion"];
   var FUENTE = "Pauta definida por el usuario (sin validar)";
-  var counter = 0;
+  var FUENTE_VALIDADA = "Pauta definida y validada por el usuario";
 
   function fail(msg) { throw new Error(msg); }
 
@@ -114,22 +113,12 @@
     return out;
   }
 
-  function nextId() {
-    var id;
-    do { counter++; id = "propia-" + counter; } while (RxData.get(id));
-    return id;
-  }
-
+  // Construye la pauta a partir del formulario ya interpretado. Pura: no guarda nada ni toca el DOM.
+  // form.validada === true (casilla explícita del farmacéutico) la marca «validado» con form.fecha_revision;
+  // en cualquier otro caso queda «pendiente» y la hoja lleva el aviso de no entregar.
   function buildRegimen(form) {
     if (!form || typeof form !== "object") fail("Formulario vacío.");
-    var nombre = txt(form.nombre);
-    if (!nombre) fail("Escriba un nombre para la pauta.");
-    if (AREAS.indexOf(form.area) === -1) fail("Elija un área: " + AREAS.join(", ") + ".");
     if (form.tipo !== "ciclos" && form.tipo !== "intervalo") fail("Elija el tipo de pauta (por ciclos o por intervalo).");
-    var n = toInt(form.ciclos_defecto);
-    if (n === null || n < 1 || n > 60) {
-      fail("El número de " + (form.tipo === "intervalo" ? "dosis" : "ciclos") + " por defecto debe ser un entero entre 1 y 60.");
-    }
     if (!Array.isArray(form.items) || !form.items.length) fail("Añada al menos un fármaco.");
 
     var cicloDias = null;
@@ -140,37 +129,33 @@
       }
     }
     var items = form.items.map(function (it) { return buildItem(it, form.tipo, cicloDias); });
+    var nombre = txt(form.nombre) || items[0].farmaco;
+
+    var validada = form.validada === true;
+    var revision = null;
+    if (validada) {
+      revision = txt(form.fecha_revision);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(revision)) fail("Falta la fecha de revisión para marcar la pauta como validada.");
+    }
 
     var r = {
-      id: "",
+      id: "pauta",
       nombre: nombre,
-      area: form.area,
       linea: "Pauta propia",
-      estado: "pendiente",
-      fecha_revision: null,
-      fuente: FUENTE,
-      ciclos_defecto: n,
-      supuestos: ["Pauta definida por el usuario: no ha sido validada frente a ninguna fuente."]
+      estado: validada ? "validado" : "pendiente",
+      fecha_revision: revision,
+      fuente: validada ? FUENTE_VALIDADA : FUENTE,
+      ciclos_defecto: 1
     };
+    if (!validada) r.supuestos = ["Pauta definida por el usuario: no ha sido validada frente a ninguna fuente."];
     if (form.tipo === "intervalo") {
       r.tipo = "intervalo";
-      items.forEach(function (it) { it.dosis_totales = n; });
+      items.forEach(function (it) { it.dosis_totales = 1; });
       r.items = items;
     } else {
       r.fases = [{ desde: 1, hasta: null, duracion: cicloDias, etiqueta: "Pauta propia", items: items }];
     }
-    if (form.indefinida === true || form.indefinida === "true") r.duracion = "indefinida";
-    // Una pauta propia idéntica a otra ya creada (misma definición) se reutiliza: no se duplica en el selector.
-    var firma = JSON.stringify(r);
-    var previa = RxData.list().filter(function (x) {
-      if (!/^propia-/.test(x.id)) return false;
-      var y = {}; Object.keys(x).forEach(function (k) { y[k] = x[k]; }); y.id = "";
-      return JSON.stringify(y) === firma;
-    })[0];
-    if (previa) return previa;
-    r.id = nextId();
-    RxData.register(r);
-    return r;
+    return RxData.check(r);
   }
 
   // Convierte el formulario "de texto" (días como "1-21") en el que espera buildRegimen.
@@ -193,21 +178,21 @@
   var EJEMPLOS = {
     biologico: function () {
       return {
-        nombre: "Biológico cada N semanas", area: "Inmunomediadas", tipo: "intervalo", ciclos_defecto: 8,
+        nombre: "Biológico cada N semanas", tipo: "intervalo", n: 8,
         items: [{ farmaco: "Fármaco biológico", abrev: "Bio", dosis: "(indique la dosis)", lugar: "casa_inyeccion",
           desplazamientos_dias: "0,14,28", primer_mantenimiento_dia: "56", cada_dias: "56" }]
       };
     },
     oral21de28: function () {
       return {
-        nombre: "Oral días 1–21 de 28", area: "Hematología", tipo: "ciclos", ciclos_defecto: 6, ciclo_dias: "28",
+        nombre: "Oral días 1–21 de 28", tipo: "ciclos", n: 6, ciclo_dias: "28",
         items: [{ farmaco: "Fármaco oral", abrev: "Oral", dosis: "(indique la dosis)", lugar: "casa", dias: "1-21" }]
       };
     }
   };
 
   return {
-    AREAS: AREAS, LUGARES: LUGARES, FUENTE: FUENTE, EJEMPLOS: EJEMPLOS,
+    LUGARES: LUGARES, FUENTE: FUENTE, EJEMPLOS: EJEMPLOS,
     parseDias: parseDias, formFromText: formFromText, buildRegimen: buildRegimen
   };
 });

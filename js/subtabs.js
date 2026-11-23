@@ -2,7 +2,7 @@
   "use strict";
   // Sub-pestañas de la pestaña Calendario. Botones #sub-btn-<n>, paneles #sub-<n>.
   // Los paneles siempre existen en el DOM; solo se oculta con `hidden`.
-  var NAMES = ["farmacos", "esquemas", "calendario", "informe"];
+  var NAMES = ["farmacos", "calendario", "informe"];
   var DEFAULT = "calendario";
 
   function show(name) {

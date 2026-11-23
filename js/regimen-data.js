@@ -4,11 +4,9 @@
 })(typeof self !== "undefined" ? self : this, function () {
   "use strict";
 
-  var AREAS = ["Hematología", "Oncología", "Inmunomediadas"];
   var ESTADOS = ["validado", "pendiente"];
   var LUGARES = ["hospital", "casa", "casa_inyeccion"];
   var DURACIONES = ["limitada", "indefinida"];
-  var registry = [];
 
   function fail(field, msg) {
     throw new Error("Esquema inválido, campo '" + field + "': " + msg);
@@ -35,11 +33,7 @@
   function validate(r) {
     if (!r || typeof r !== "object") fail("id", "el esquema debe ser un objeto");
     if (!nonEmptyStr(r.id)) fail("id", "obligatorio");
-    if (registry.some(function (x) { return x.id === r.id; })) {
-      fail("id", "duplicado: " + r.id);
-    }
     if (!nonEmptyStr(r.nombre)) fail("nombre", "obligatorio");
-    if (AREAS.indexOf(r.area) === -1) fail("area", "debe ser uno de " + AREAS.join(", "));
     if (!nonEmptyStr(r.linea)) fail("linea", "obligatorio");
     if (ESTADOS.indexOf(r.estado) === -1) fail("estado", "debe ser uno de " + ESTADOS.join(", "));
     if (!nonEmptyStr(r.fuente)) fail("fuente", "obligatorio (texto no vacío)");
@@ -90,37 +84,11 @@
     });
   }
 
-  function register(r) {
+  // Valida la forma de una pauta (lanza Error con el campo y el motivo). Sin estado: no hay catálogo.
+  function check(r) {
     validate(r);
-    registry.push(r);
+    return r;
   }
 
-  function list() {
-    return registry.slice();
-  }
-
-  function get(id) {
-    return registry.filter(function (r) { return r.id === id; })[0];
-  }
-
-  function byArea() {
-    var out = {};
-    registry.forEach(function (r) {
-      (out[r.area] = out[r.area] || []).push(r);
-    });
-    return out;
-  }
-
-  // Quita un esquema del registro (p. ej. una pauta propia al empezar de nuevo). Devuelve true si existía.
-  function remove(id) {
-    var n = registry.length;
-    registry = registry.filter(function (r) { return r.id !== id; });
-    return registry.length !== n;
-  }
-
-  function _reset() {
-    registry = [];
-  }
-
-  return { register: register, list: list, get: get, byArea: byArea, remove: remove, _reset: _reset };
+  return { check: check };
 });

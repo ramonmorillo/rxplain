@@ -1,51 +1,32 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { loadPage } from "./helpers/loadPage.mjs";
+import { definirPauta, setValue } from "./helpers/pauta.mjs";
 
-function setValue(dom, el, value, type = "input") {
-  el.value = value;
-  el.dispatchEvent(new dom.window.Event(type, { bubbles: true }));
-}
 function check(dom, el, on) {
   el.checked = on;
   el.dispatchEvent(new dom.window.Event("change", { bubbles: true }));
 }
 const cic = (extra) => Object.assign({
-  nombre: "Oral indef", area: "Hematología", tipo: "ciclos", ciclos_defecto: 3, ciclo_dias: 28,
-  items: [{ farmaco: "Oral", abrev: "Or", dosis: "10 mg", lugar: "casa", dias: [1, 8] }]
+  nombre: "Oral indef", tipo: "ciclos", n: 3, ciclo_dias: 28,
+  items: [{ farmaco: "Oral", abrev: "Or", dosis: "10 mg", lugar: "casa", dias: "1,8" }]
 }, extra);
 const inter = (cada, extra) => Object.assign({
-  nombre: "Bio indef", area: "Inmunomediadas", tipo: "intervalo", ciclos_defecto: 3,
-  items: [{ farmaco: "Bio", abrev: "Bi", dosis: "40 mg", lugar: "casa_inyeccion", desplazamientos_dias: [0], primer_mantenimiento_dia: cada, cada_dias: cada }]
+  nombre: "Bio indef", tipo: "intervalo", n: 3,
+  items: [{ farmaco: "Bio", abrev: "Bi", dosis: "40 mg", lugar: "casa_inyeccion", desplazamientos_dias: "0",
+    primer_mantenimiento_dia: String(cada), cada_dias: String(cada) }]
 }, extra);
 
-// Crea la pauta por la interfaz del constructor (así se refresca el selector, como en uso real).
+// Define la pauta por el formulario, como el usuario (la casilla «indefinida» es un control del usuario).
 async function setup(form, inicio = "2026-11-19") {
   const dom = await loadPage();
-  const d = dom.window.document;
-  d.getElementById("cal_nueva").click();
-  d.getElementById("cb_nombre").value = form.nombre;
-  d.getElementById("cb_area").value = form.area;
-  const tipo = d.getElementById("cb_tipo");
-  tipo.value = form.tipo;
-  tipo.dispatchEvent(new dom.window.Event("change", { bubbles: true }));
-  d.getElementById("cb_n").value = String(form.ciclos_defecto);
-  if (form.ciclo_dias) d.getElementById("cb_ciclo").value = String(form.ciclo_dias);
-  const row = d.querySelector("#cb_items .cb-item");
-  for (const [k, v] of Object.entries(form.items[0])) {
-    const el = row.querySelector(`[data-f="${k}"]`);
-    if (el) el.value = Array.isArray(v) ? v.join(",") : String(v);
-  }
-  d.getElementById("cb_indefinida").checked = !!form.indefinida;
-  d.getElementById("cb_crear").click();
-  assert.equal(d.getElementById("cb_error").textContent, "");
-  const r = dom.window.RxData.list().filter((x) => x.linea === "Pauta propia").pop();
-  setValue(dom, d.getElementById("cal_inicio"), inicio, "change");
-  return { dom, d, r };
+  const d = definirPauta(dom, { ...form, inicio });
+  assert.equal(d.getElementById("cb_estado").textContent, "");
+  return { dom, d };
 }
 const dates = (d) => [...d.querySelectorAll("#cal_meses [data-date]")].map((e) => e.dataset.date);
 
-test("esquema indefinido: casilla marcada, hasta 2027-12-31 y calendario cubre hasta diciembre 2027", async () => {
+test("pauta indefinida: casilla marcada, hasta 2027-12-31 y calendario cubre hasta diciembre 2027", async () => {
   const { dom, d } = await setup({ ...cic(), indefinida: true });
   assert.equal(d.getElementById("cal_indefinida").checked, true);
   assert.equal(d.getElementById("cal_hasta").value, "2027-12-31");
@@ -58,7 +39,7 @@ test("esquema indefinido: casilla marcada, hasta 2027-12-31 y calendario cubre h
   dom.window.close();
 });
 
-test("esquema limitado: casilla desmarcada y el nº de ciclos manda", async () => {
+test("pauta limitada: casilla desmarcada y el nº de ciclos manda", async () => {
   const { d, dom } = await setup(cic());
   assert.equal(d.getElementById("cal_indefinida").checked, false);
   assert.equal(d.querySelectorAll("#cal_meses .mes").length, 4);
@@ -114,26 +95,20 @@ test("hasta vacío o inválido: mensaje, sin errores", async () => {
   dom.window.close();
 });
 
-test("los esquemas de mieloma incluidos no son indefinidos", async () => {
-  const dom = await loadPage();
-  for (const r of dom.window.RxData.list()) assert.notEqual(r.duracion, "indefinida", r.id);
-  assert.equal(dom.window.document.getElementById("cal_indefinida").checked, false);
-  dom.window.close();
-});
-
-test("el constructor tiene la casilla de pauta indefinida y la propaga al esquema", async () => {
+test("la casilla indefinida no se marca sola: es un control del usuario", async () => {
   const dom = await loadPage();
   const d = dom.window.document;
-  d.getElementById("cal_nueva").click();
-  const cb = d.getElementById("cb_indefinida");
-  assert.ok(cb);
+  const cb = d.getElementById("cal_indefinida");
+  assert.equal(cb.checked, false);
   assert.match(cb.closest("label").textContent, /Pauta indefinida \(se continúa hasta que su médico indique otra cosa\)/);
+  assert.equal(d.getElementById("cb_indefinida"), null);
   d.getElementById("cal_ej_oral").click();
-  d.getElementById("cb_indefinida").checked = true;
-  d.getElementById("cb_crear").click();
-  const r = dom.window.RxData.list().filter((x) => x.linea === "Pauta propia").pop();
-  assert.equal(r.duracion, "indefinida");
-  assert.equal(d.getElementById("cal_indefinida").checked, true);
+  assert.equal(d.getElementById("cal_indefinida").checked, false);
+  check(dom, cb, true);
+  assert.equal(d.getElementById("cal_ciclos").disabled, true);
+  assert.equal(d.getElementById("cal_hasta").disabled, false);
+  check(dom, cb, false);
+  assert.equal(d.getElementById("cal_hasta").disabled, true);
   dom.window.close();
 });
 

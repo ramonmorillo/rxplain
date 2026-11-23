@@ -156,7 +156,14 @@ async function ui(texto) {
   return { dom, d };
 }
 
-test("UI: aviso de borrador, propuestas con frase origen, y 'Usar en el constructor' precarga sin dosis ni área/lugar adivinados", async () => {
+function escribir(dom, el, value, type = "input") {
+  el.value = value;
+  el.dispatchEvent(new dom.window.Event(type, { bubbles: true }));
+}
+const pildoras = (d) => Array.from(d.querySelectorAll("#cal_meses .dia")).filter((x) => x.querySelector(".pildora")).map((x) => x.dataset.date);
+const campo = (d, f) => d.querySelector(`#cal_pauta .cb-item [data-f="${f}"]`);
+
+test("UI: aviso de borrador, propuestas con frase origen, y 'Usar en el calendario' precarga el formulario sin dosis", async () => {
   const { dom, d } = await ui("Se administra en las semanas 0, 2 y 4 y después cada 8 semanas. Alternativamente una vez al día.");
   const w = dom.window;
   assert.match(d.getElementById("sub-farmacos").textContent, /Borrador automático: revíselo y complételo; no sustituye la validación farmacéutica\./);
@@ -167,51 +174,127 @@ test("UI: aviso de borrador, propuestas con frase origen, y 'Usar en el construc
   const lis = d.querySelectorAll("#far_propuestas li");
   assert.equal(lis.length, 2);
   assert.match(lis[0].textContent, /semanas 0, 2 y 4 y después cada 8 semanas/);
+  assert.equal(lis[0].querySelector("button").textContent, "Usar en el calendario");
+  assert.equal(d.getElementById("cb_origen").hidden, true);
   lis[0].querySelector("button").click();
-  assert.equal(d.getElementById("sub-btn-esquemas").getAttribute("aria-selected"), "true");
-  assert.equal(d.getElementById("cal_constructor").hidden, false);
-  const c = d.getElementById("cal_constructor");
-  assert.equal(c.querySelector("#cb_tipo").value, "intervalo");
-  assert.match(c.querySelector("#cb_nombre").value, /FARMAXINA/);
-  assert.match(c.querySelector("#cb_nombre").value, /12345/);
-  const row = c.querySelector(".cb-item");
-  assert.equal(row.querySelector('[data-f="farmaco"]').value, "FARMAXINA");
-  assert.equal(row.querySelector('[data-f="dosis"]').value, "");
-  assert.equal(row.querySelector('[data-f="desplazamientos_dias"]').value, "0,14,28");
-  assert.equal(row.querySelector('[data-f="primer_mantenimiento_dia"]').value, "56");
-  assert.equal(row.querySelector('[data-f="cada_dias"]').value, "56");
-  assert.equal(row.querySelector('[data-f="lugar"]').value, "");
-  assert.equal(c.querySelector("#cb_area").value, "");
-  // Sin dosis, área ni lugar no se puede crear: el farmacéutico debe completarlos.
-  c.querySelector("#cb_crear").click();
-  assert.match(c.querySelector("#cb_error").textContent, /\S/);
-  // Completado por el farmacéutico: la pauta nace pendiente.
-  c.querySelector("#cb_area").value = "Inmunomediadas";
-  row.querySelector('[data-f="dosis"]').value = "(la indica el farmacéutico)";
-  row.querySelector('[data-f="lugar"]').value = "casa_inyeccion";
-  c.querySelector("#cb_crear").click();
-  assert.equal(c.hidden, true);
-  const reg = w.RxData.get([...w.RxData.byArea()["Inmunomediadas"]].pop().id);
-  assert.equal(reg.estado, "pendiente");
+  // Se queda en la sub-pestaña Calendario con el formulario precargado.
+  assert.equal(d.getElementById("sub-btn-calendario").getAttribute("aria-selected"), "true");
+  assert.equal(d.getElementById("sub-calendario").hidden, false);
+  assert.equal(d.getElementById("sub-farmacos").hidden, true);
+  assert.equal(d.getElementById("cb_tipo").value, "intervalo");
+  assert.equal(d.getElementById("cb_nombre").value, "FARMAXINA");
+  const origen = d.getElementById("cb_origen");
+  assert.equal(origen.hidden, false);
+  assert.match(origen.textContent, /^Borrador de la ficha técnica de FARMAX 10 mg \(nº reg\. 12345\): revíselo y complételo; no sustituye la validación farmacéutica\.$/);
+  assert.equal(d.querySelectorAll("#cal_pauta .cb-item").length, 1);
+  assert.equal(campo(d, "farmaco").value, "FARMAXINA");
+  assert.equal(campo(d, "dosis").value, "");
+  assert.equal(campo(d, "desplazamientos_dias").value, "0,14,28");
+  assert.equal(campo(d, "primer_mantenimiento_dia").value, "56");
+  assert.equal(campo(d, "cada_dias").value, "56");
+  assert.equal(campo(d, "lugar").value, "casa");
+  assert.equal(d.getElementById("cal_ciclos").value, "6");
+  assert.equal(d.getElementById("cal_indefinida").checked, false);
+  // El foco queda en el primer campo que falta: la dosis.
+  assert.equal(d.activeElement, campo(d, "dosis"));
+  // Sin dosis no hay calendario y el formulario lo dice.
+  assert.match(d.getElementById("cb_estado").textContent, /dosis/i);
+  assert.equal(d.querySelectorAll("#cal_meses .pildora").length, 0);
+  // Completado por el farmacéutico: el calendario aparece en vivo, pendiente de validación.
+  escribir(w, campo(d, "dosis"), "(la indica el farmacéutico)");
+  escribir(w, d.getElementById("cal_inicio"), "2026-11-02", "change");
+  assert.equal(d.getElementById("cb_estado").textContent, "");
+  assert.deepEqual(pildoras(d), ["2026-11-02", "2026-11-16", "2026-11-30", "2026-12-28", "2027-02-22", "2027-04-19"]);
+  assert.ok(d.querySelector("#cal_avisos .aviso-pendiente"));
   assert.deepEqual(dom.errors, []);
   w.close();
 });
 
-test("UI: propuesta de ciclo precarga días y duración; diaria deja ciclo vacío (no se inventa)", async () => {
+test("UI: propuesta de ciclo precarga días y duración; diaria precarga 28 días, indefinida y veces al día", async () => {
   const { dom, d } = await ui("Los días 1 a 21 de ciclos de 28 días. Tomar dos veces al día.");
+  const w = dom.window;
   d.getElementById("far_proponer").click();
   const lis = d.querySelectorAll("#far_propuestas li");
   assert.equal(lis.length, 2);
   lis[0].querySelector("button").click();
-  const c = d.getElementById("cal_constructor");
-  assert.equal(c.querySelector("#cb_tipo").value, "ciclos");
-  assert.equal(c.querySelector("#cb_ciclo").value, "28");
-  assert.equal(c.querySelector('.cb-item [data-f="dias"]').value, "1-21");
+  assert.equal(d.getElementById("sub-calendario").hidden, false);
+  assert.equal(d.getElementById("cb_tipo").value, "ciclos");
+  assert.equal(d.getElementById("cb_ciclo").value, "28");
+  assert.equal(campo(d, "dias").value, "1-21");
+  assert.equal(campo(d, "lugar").value, "casa");
+  assert.equal(campo(d, "dosis").value, "");
+  assert.equal(d.activeElement, campo(d, "dosis"));
+  assert.equal(d.getElementById("cal_indefinida").checked, false);
+  assert.equal(d.getElementById("cal_ciclos").value, "6");
+  escribir(w, campo(d, "dosis"), "(indique la dosis)");
+  escribir(w, d.getElementById("cal_inicio"), "2026-11-02", "change");
+  const p = pildoras(d);
+  assert.equal(p.length, 126); // 6 ciclos x 21 días
+  assert.equal(p[0], "2026-11-02");
+  assert.equal(p[20], "2026-11-22");
+  assert.equal(p[21], "2026-11-30");
+  assert.equal(p[125], "2027-04-11"); // ciclo 6 empieza el 2027-03-22: día 21
+  // Vuelve a Fármacos y usa la diaria: ciclo de 28 días diarios con calendario indefinido.
   d.getElementById("sub-btn-farmacos").click();
+  assert.equal(d.getElementById("sub-farmacos").hidden, false);
   d.querySelectorAll("#far_propuestas li")[1].querySelector("button").click();
-  assert.equal(c.querySelector("#cb_ciclo").value, "");
-  assert.equal(c.querySelector('.cb-item [data-f="dias"]').value, "");
-  assert.equal(c.querySelector('.cb-item [data-f="veces_al_dia"]').value, "2");
+  assert.equal(d.getElementById("sub-calendario").hidden, false);
+  assert.equal(d.getElementById("cb_tipo").value, "ciclos");
+  assert.equal(d.getElementById("cb_ciclo").value, "28");
+  assert.equal(campo(d, "dias").value, "1-28");
+  assert.equal(campo(d, "veces_al_dia").value, "2");
+  assert.equal(campo(d, "dosis").value, "");
+  assert.equal(d.getElementById("cal_indefinida").checked, true);
+  assert.equal(d.getElementById("cal_ciclos").disabled, true);
+  assert.equal(d.getElementById("cal_hasta").disabled, false);
+  assert.equal(d.getElementById("cal_hasta").value, "2027-12-31");
+  assert.match(d.getElementById("cb_origen").textContent, /FARMAX 10 mg/);
+  assert.equal(d.activeElement, campo(d, "dosis"));
+  escribir(w, campo(d, "dosis"), "(indique la dosis)");
+  escribir(w, d.getElementById("cal_inicio"), "2026-11-02", "change");
+  const diaria = pildoras(d);
+  assert.equal(diaria.length, 425); // todos los días del 2026-11-02 al 2027-12-31
+  assert.equal(diaria[0], "2026-11-02");
+  assert.equal(diaria[424], "2027-12-31");
+  assert.equal(d.getElementById("cal_ciclos").value, "16");
+  assert.match(d.querySelector("#cal_meses .pildora").title, /2 veces al día/);
+  assert.deepEqual(dom.errors, []);
+  w.close();
+});
+
+test("UI: propuesta de intervalo sin dosis iniciales ('cada N semanas') precarga dosis el día 0 y mantenimiento cada N", async () => {
+  const { dom, d } = await ui("Se inyecta cada 8 semanas.");
+  const w = dom.window;
+  d.getElementById("far_proponer").click();
+  const lis = d.querySelectorAll("#far_propuestas li");
+  assert.equal(lis.length, 1);
+  lis[0].querySelector("button").click();
+  assert.equal(d.getElementById("sub-calendario").hidden, false);
+  assert.equal(d.getElementById("cb_tipo").value, "intervalo");
+  assert.equal(campo(d, "desplazamientos_dias").value, "0");
+  assert.equal(campo(d, "primer_mantenimiento_dia").value, "56");
+  assert.equal(campo(d, "cada_dias").value, "56");
+  assert.equal(campo(d, "dosis").value, "");
+  assert.equal(d.activeElement, campo(d, "dosis"));
+  escribir(w, campo(d, "dosis"), "(indique la dosis)");
+  escribir(w, d.getElementById("cal_inicio"), "2026-11-02", "change");
+  assert.equal(d.getElementById("cb_estado").textContent, "");
+  assert.deepEqual(pildoras(d), ["2026-11-02", "2026-12-28", "2027-02-22", "2027-04-19", "2027-06-14", "2027-08-09"]);
+  assert.deepEqual(dom.errors, []);
+  w.close();
+});
+
+test("UI: inducción sin mantenimiento determinable queda con el campo vacío y el formulario lo pide (no se inventa)", async () => {
+  const { dom, d } = await ui("Semanas 0, 4 y 8 y después cada 4 semanas.");
+  d.getElementById("far_proponer").click();
+  d.querySelector("#far_propuestas li button").click();
+  assert.equal(campo(d, "desplazamientos_dias").value, "0,28,56");
+  assert.equal(campo(d, "primer_mantenimiento_dia").value, "");
+  assert.equal(campo(d, "cada_dias").value, "28");
+  assert.match(d.getElementById("cb_estado").textContent, /\S/);
+  assert.equal(d.querySelectorAll("#cal_meses .pildora").length, 0);
+  // El foco va al primer campo vacío visible (la dosis, que va antes).
+  assert.equal(d.activeElement, campo(d, "dosis"));
   assert.deepEqual(dom.errors, []);
   dom.window.close();
 });
@@ -329,7 +412,7 @@ test("UI F5: ciclo sin veces al día en la ficha precarga el campo en blanco con
   const { dom, d } = await ui("Los días 1 a 21 de ciclos de 28 días.");
   d.getElementById("far_proponer").click();
   d.querySelector("#far_propuestas li button").click();
-  const v = d.querySelector('#cal_constructor .cb-item [data-f="veces_al_dia"]');
+  const v = d.querySelector('#cal_pauta .cb-item [data-f="veces_al_dia"]');
   assert.equal(v.value, "");
   assert.match(v.placeholder, /sin dato/i);
   dom.window.close();

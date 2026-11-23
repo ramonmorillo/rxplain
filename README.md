@@ -10,21 +10,19 @@ No requiere servidor ni instalación: es HTML, CSS y JavaScript sin dependencias
 Genera una infografía imprimible de la medicación del paciente. Incluye una consulta opcional a CIMA/AEMPS (ver Privacidad).
 
 ### Calendario
-- Se elige una pauta de un catálogo agrupado por área (Hematología, Oncología, Inmunomediadas), una fecha de inicio y el número de ciclos (o de dosis).
+- La **pauta se define en la propia pestaña Calendario** (no hay catálogo de esquemas) y el calendario se recalcula al escribir: fármacos, dosis, lugar, días, fecha de inicio y número de ciclos (o de dosis).
 - Dos tipos de pauta:
-  - `ciclos`: fases con duración fija en días y fármacos con los días del ciclo en que se administran (p. ej. un ciclo de 28 días).
+  - `ciclos`: un ciclo de N días y, para cada fármaco, los días del ciclo en que se administra (p. ej. días 1–21 de 28).
   - `intervalo`: dosis separadas por intervalos (desplazamientos desde el inicio, primer mantenimiento y periodicidad).
 - **Avisos de conflicto** (`js/calendario-view.js`, a partir de los festivos de `js/schedule-engine.js`): se señalan las visitas al hospital que caen en fin de semana o festivo. Los festivos que conoce el motor son una lista fija (nacionales más el Día de Andalucía) y Jueves y Viernes Santo calculados; **no incluye otros festivos autonómicos ni locales** (conviene que el farmacéutico los revise).
-- **Hoja del paciente imprimible**: si el esquema está en estado `pendiente`, la hoja lleva el banner "ESQUEMA PENDIENTE DE VALIDACIÓN — NO ENTREGAR AL PACIENTE" (en cabecera y repetido en cada mes). El banner se muestra salvo que `estado` sea exactamente `validado`. La tabla de medicación en casa indica en qué días del ciclo se toma cada fármaco.
+- **Hoja del paciente imprimible**: salvo que se marque la casilla «Pauta revisada y validada por el farmacéutico» (`#cb_validada`, desmarcada por defecto), la pauta queda `pendiente` y la hoja lleva el banner «ESQUEMA PENDIENTE DE VALIDACIÓN — NO ENTREGAR AL PACIENTE» (en cabecera y repetido en cada mes). La tabla de medicación en casa indica en qué días del ciclo se toma cada fármaco.
 
-#### Flujo de las cuatro sub-pestañas
-1. **Fármacos**: buscar el medicamento en CIMA, leer el apartado 4.2 y, si se quiere, proponer un borrador de pauta (siempre editable y *pendiente*).
-2. **Esquemas**: elegir un esquema del catálogo o crear una pauta propia (el borrador se precarga aquí).
-3. **Calendario**: fecha de inicio, ciclos/dosis y retrasos; avisos de conflicto y calendario mensual.
-   - **Pauta indefinida**: un esquema puede declarar `duracion: "indefinida"` (campo opcional; por defecto `"limitada"`; la casilla «Pauta indefinida» del constructor lo establece). Con la casilla `#cal_indefinida` activa (se marca sola si el esquema es indefinido) el nº de ciclos/dosis se calcula para cubrir hasta `#cal_hasta` («Calendario hasta», por defecto 31/12/2027); el campo de ciclos queda automático. El motor calcula como máximo 60 ciclos/dosis: si no llega a esa fecha se muestra el aviso «Calendario recortado hasta DD/MM/AAAA». Si la fecha de inicio es posterior a «Calendario hasta» se avisa y no se calcula nada. Los tres esquemas de mieloma incluidos **no** son indefinidos (decisión clínica de la persona responsable).
-4. **Informe**: identificador del paciente (opcional, no se guarda), y datos de contacto de la hoja (`#inf_hospital`, `#inf_farmaceutico`, `#inf_telefono`; si se dejan vacíos se usan los de Infografía `#center`, `#pharm_name`, `#contact`; solo en memoria) y vista previa en pantalla (`#informe_preview`), generada con la misma función que la hoja impresa y refrescada con cada cambio. Empieza por **«Sus próximas administraciones»**: las próximas 8 desde la fecha de inicio (o desde hoy si la pauta ya empezó), con día de la semana, fármaco, dosis y lugar (hospital: texto HOSPITAL y borde grueso; casa: «En casa»); si no queda ninguna, indica «0 administraciones». Termina con el aviso «Este informe no sustituye las indicaciones de su farmacéutico o médico». La vista previa no se imprime; el botón imprime la hoja construida aparte (`#hojaPaciente`). Nada se guarda fuera de la memoria de la página.
-
-> Los tres esquemas de mieloma múltiple incluidos (`mieloma-drd`, `mieloma-vrd-swog`, `mieloma-isa-kd`) están todos en `estado: "pendiente"`: proceden de una hoja de costes del Servicio y **no han sido validados clínicamente**. No deben entregarse a pacientes hasta su revisión.
+#### Flujo de las tres sub-pestañas
+1. **Fármacos**: buscar el medicamento en CIMA, leer el apartado 4.2 y, si se quiere, proponer un borrador de pauta. **Usar en el calendario** lo precarga en la pestaña Calendario y deja el cursor en el primer campo que falta (normalmente la dosis).
+2. **Calendario**: la pauta (formulario `#cal_pauta`), fecha de inicio, ciclos/dosis y retrasos; avisos de conflicto y calendario mensual.
+   - **Pauta indefinida** (casilla `#cal_indefinida`, control del usuario; una propuesta *diaria* de la ficha la marca): el nº de ciclos/dosis se calcula para cubrir hasta `#cal_hasta` («Calendario hasta», por defecto 31/12/2027); el campo de ciclos queda automático. El motor calcula como máximo 60 ciclos/dosis: si no llega a esa fecha se muestra el aviso «Calendario recortado hasta DD/MM/AAAA». Si la fecha de inicio es posterior a «Calendario hasta» se avisa y no se calcula nada.
+   - Un nº de ciclos fuera de 1–60 o no entero se ajusta y se avisa de lo que se ha calendarizado.
+3. **Informe**: identificador del paciente (opcional, no se guarda), y datos de contacto de la hoja (`#inf_hospital`, `#inf_farmaceutico`, `#inf_telefono`; si se dejan vacíos se usan los de Infografía `#center`, `#pharm_name`, `#contact`; solo en memoria) y vista previa en pantalla (`#informe_preview`), generada con la misma función que la hoja impresa y refrescada con cada cambio. Empieza por **«Sus próximas administraciones»**: las próximas 8 desde la fecha de inicio (o desde hoy si la pauta ya empezó), con día de la semana, fármaco, dosis y lugar (hospital: texto HOSPITAL y borde grueso; casa: «En casa»); si no queda ninguna, indica «0 administraciones». Termina con el aviso «Este informe no sustituye las indicaciones de su farmacéutico o médico». La vista previa no se imprime; el botón imprime la hoja construida aparte (`#hojaPaciente`). Nada se guarda fuera de la memoria de la página.
 
 ## Privacidad
 
@@ -36,47 +34,17 @@ Declaración, comprobada con una búsqueda en el código (`js/`, `data/`, `index
 
 Esta declaración describe el código del repositorio. Si se modifica el código, debe volver a verificarse.
 
-## Cómo añadir un esquema
+## La pauta
 
-Cada esquema es un archivo en `data/regimens/` que llama a `RxData.register({...})`. Se valida al registrarse (`js/regimen-data.js`) y, si hay un error, lanza una excepción con el campo afectado. Usar de modelo `data/regimens/mieloma-drd.js` (por ciclos) y `data/regimens/mieloma-isa-kd.js`; los atajos para construir fármacos están en `data/regimens/helpers.js`. El tipo `intervalo` no lo usa ninguno de los tres esquemas incluidos; hay un ejemplo sintético en `tests/fixtures/regimen-intervalo.mjs`.
+El formulario **Pauta** de la pestaña Calendario define qué se toma y cuándo, sin editar código:
 
-**Un esquema debe proceder siempre de una fuente citable (ficha técnica, guía, protocolo del servicio). Nunca se inventa.** La herramienta no calcula dosis: `dosis` es texto que se muestra tal cual.
-
-Campos comunes (obligatorios salvo indicación):
-
-| Campo | Descripción |
-|---|---|
-| `id` | Texto único, p. ej. `mieloma-drd` |
-| `nombre` | Nombre visible |
-| `area` | `Hematología`, `Oncología` o `Inmunomediadas` |
-| `linea` | Texto, p. ej. `1ª línea · no candidatos` |
-| `estado` | `validado` o `pendiente` |
-| `fuente` | Texto no vacío con el origen del esquema |
-| `fecha_revision` | `YYYY-MM-DD`; solo puede ser `null` si `estado` es `pendiente` |
-| `ciclos_defecto` | Número >= 1 |
-| `ensayo`, `continuo`, `notas`, `supuestos` | Opcionales (`notas` y `supuestos` son arrays de texto) |
-
-Esquema por ciclos (por defecto): `fases: [{ desde, hasta (null = sin límite), duracion (días, entero), etiqueta, items: [...] }]`. Cada item: `farmaco`, `abrev`, `dosis` (texto), `lugar` (`hospital`, `casa` o `casa_inyeccion`), `dias` (enteros >= 1 y <= `duracion`), y opcionalmente `etiqueta` y `veces_al_dia`.
-
-Esquema por intervalo: `tipo: "intervalo"` e `items: [{ farmaco, abrev, dosis, lugar, desplazamientos_dias: [0, ...], primer_mantenimiento_dia, cada_dias, dosis_totales }]`.
-
-Pasos:
-1. Crear `data/regimens/<id>.js` siguiendo uno de los modelos.
-2. Añadir su etiqueta `<script src="data/regimens/<id>.js"></script>` en `index.html`, junto a las de los demás esquemas y antes de `js/calendario-view.js`.
-3. Añadir pruebas si el esquema introduce un caso nuevo y ejecutar `npm test`.
-4. Dejarlo en `estado: "pendiente"` hasta que un farmacéutico lo valide; solo entonces pasar a `validado` con `fecha_revision`.
-
-## Pautas propias
-
-En la pestaña Calendario, el botón **Crear pauta propia** abre un formulario para definir una pauta sin editar código:
-
-- Elija nombre, área y tipo: *por ciclos* (p. ej. "días 1–21 de 28") o *por intervalo* (dosis sueltas, p. ej. "0, 14, 28 y luego cada 56 días").
-- **Añadir fármaco** crea una fila por fármaco. Los días se escriben como lista o rango: `1-21`, `1,8,15`, `1-3, 8`.
-- Hay dos ejemplos precargables: "Biológico cada N semanas" y "Oral días 1–21 de 28".
-- La pauta se registra solo en memoria con `estado: "pendiente"` (fuente "Pauta definida por el usuario (sin validar)"); se selecciona y se pinta al crearla, y la hoja impresa lleva el aviso de pendiente. No se guarda al cerrar la página.
+- Tipo: *por ciclos* (p. ej. «días 1–21 de 28») o *por intervalo* (dosis sueltas, p. ej. «0, 14, 28 y luego cada 56 días»). El nombre es opcional (por defecto, el del primer fármaco).
+- **Añadir fármaco** crea una fila por fármaco (fármaco, abreviatura, dosis, lugar —casa por defecto—, veces al día y días). Los días se escriben como lista o rango: `1-21`, `1,8,15`, `1-3, 8`. Mientras la pauta esté incompleta se indica qué falta y no se pinta calendario.
+- Hay dos ejemplos precargables: «Biológico cada N semanas» y «Oral días 1–21 de 28».
+- La pauta vive solo en memoria y nunca se guarda. Queda `pendiente` (fuente «Pauta definida por el usuario (sin validar)») hasta que el farmacéutico marca la casilla de validación.
 - La dosis es texto libre: la herramienta no calcula dosis.
 
-La lógica está en `js/constructor-pauta.js` (`RxBuilder.buildRegimen`) y sus pruebas en `tests/constructor-pauta.test.mjs`.
+Una pauta debe proceder de una fuente citable (ficha técnica, guía, protocolo del servicio): la herramienta no la inventa. La lógica está en `js/constructor-pauta.js` (`RxBuilder.buildRegimen`) y su validación en `js/regimen-data.js` (`RxData.check`); las pruebas, en `tests/constructor-pauta.test.mjs` y `tests/regimen-data.test.mjs`.
 
 ## Pruebas
 
@@ -98,10 +66,9 @@ js/tabs.js                 Pestañas
 js/cima.js                 Cliente CIMA/AEMPS (búsqueda y apartado 4.2; `fetch` inyectable)
 js/farmacos-view.js        Sub-pestaña Fármacos
 js/schedule-engine.js      Motor de calendarización (fechas, festivos)
-js/regimen-data.js         Registro y validador de esquemas
+js/regimen-data.js         Validador de la forma de una pauta
 js/calendario-view.js      Interfaz de la pestaña Calendario (incluye los avisos y la detección de conflictos)
 js/hoja-paciente.js        Hoja imprimible del paciente
-data/regimens/             Esquemas (+ helpers.js)
 tests/                     Pruebas (node --test)
 docs/superpowers/          Especificación y plan del desarrollo
 ```
@@ -114,7 +81,7 @@ La sub-pestaña **Fármacos** busca un medicamento en CIMA/AEMPS (`/medicamentos
 
 ### Borrador de pauta desde la ficha técnica
 
-Con el 4.2 cargado, **Proponer pauta** (`js/posologia-ft.js`) lee solo la *frecuencia* y muestra cada propuesta junto a la frase de la que sale; **Usar en el constructor** la precarga en el formulario de Esquemas. Es un borrador automático: no sustituye la validación farmacéutica, y la pauta que se cree queda siempre como *pendiente*.
+Con el 4.2 cargado, **Proponer pauta** (`js/posologia-ft.js`) lee solo la *frecuencia* y muestra cada propuesta junto a la frase de la que sale; **Usar en el calendario** la precarga en el formulario de la pestaña Calendario (una pauta *diaria* se representa como ciclos de 28 días con calendario indefinido). Es un borrador automático: no sustituye la validación farmacéutica, y la pauta que se cree queda siempre como *pendiente*.
 
 **Límites:**
 - Reconoce solo patrones simples en español: «una vez / dos veces… al día», «cada N horas» (si 24/N es entero de 1 a 6), «días 1 a 21 de ciclos de 28 días», «21 de cada 28 días», «cada N semanas/días» y «semanas 0, 2 y 4 y después cada 8 semanas». Admite coma decimal, pero solo si el resultado son días enteros («cada 1,5 semanas» no se propone).
@@ -136,7 +103,8 @@ Pendiente de realizar por el farmacéutico en Chrome y en Edge (no se ha podido 
 
 - [ ] (a) Abrir `index.html` desde disco y desde la URL publicada (una vez confirmada).
 - [ ] (b) Generar una infografía de ejemplo ("Cargar ejemplo") e imprimir en vista previa: debe verse igual que antes de añadir la pestaña Calendario.
-- [ ] (c) En Calendario, cargar DRd con inicio en sábado y comprobar que aparece el aviso de conflicto.
+- [ ] (c) En Calendario, definir una pauta con un fármaco en lugar «Hospital», fecha de inicio en sábado y comprobar que aparece el aviso de conflicto.
+- [ ] (c2) En Fármacos, buscar un medicamento, elegir un resultado, «Proponer pauta» → «Usar en el calendario»; escribir la dosis y comprobar que aparece el calendario.
 - [ ] (d) Imprimir la hoja del paciente: el banner de "pendiente" debe ser visible y legible en blanco y negro **y aparecer en CADA página impresa** de una hoja de varias páginas.
 
 ## Publicación (GitHub Pages)
