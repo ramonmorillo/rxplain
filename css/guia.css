@@ -27,7 +27,8 @@
 }
 @media print{
   body[data-printing="guia"]{background:#fff!important}
-  body[data-printing="guia"] .pageShell > :not(#tab-guia){display:none!important}
+  body[data-printing="guia"] .pageShell > :not(main){display:none!important}
+  body[data-printing="guia"] main > :not(#tab-guia){display:none!important}
   body[data-printing="guia"] #tab-guia{display:block!important;max-width:none;padding:0;margin:0}
   body[data-printing="guia"] .guiaDoc{border:0;padding:0}
   body[data-printing="guia"] .guiaDoc h3,body[data-printing="guia"] .guiaDoc h4{break-after:avoid}

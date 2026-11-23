@@ -208,16 +208,18 @@
       '<section class="cal-subpanel"' + panelAttrs("farmacos") + ">" +
       '<div id="farmacos_root"><p>Próximamente</p></div></section>' +
       '<section class="cal-subpanel"' + panelAttrs("calendario") + ">" +
+      '<div class="cal-layout"><div class="cal-izq">' +
       '<section id="cal_pauta" class="cal-constructor" aria-label="Pauta"></section>' +
-      '<div id="cal_resumen" class="cal-resumen"><span id="cal_resumen_txt"></span></div>' +
       '<form class="cal-form" onsubmit="return false">' +
       '<label>Fecha de inicio <input type="date" id="cal_inicio"></label> ' +
       '<label><span id="cal_ciclos_lbl">Ciclos</span> <input id="cal_ciclos" type="number" inputmode="numeric" min="1" max="60"></label> ' +
       '<label class="cal-check"><span><input type="checkbox" id="cal_indefinida"> Pauta indefinida (se continúa hasta que su médico indique otra cosa)</span></label> ' +
       '<label>Calendario hasta <input type="date" id="cal_hasta" value="' + HASTA_DEFECTO + '"></label>' +
-      '<div id="cal_retrasos" class="cal-retrasos"></div></form>' +
+      '<div id="cal_retrasos" class="cal-retrasos"></div></form></div>' +
+      '<div class="cal-der">' +
+      '<div id="cal_resumen" class="cal-resumen"><span id="cal_resumen_txt"></span></div>' +
       '<div id="cal_avisos" class="cal-avisos"></div>' +
-      '<div id="cal_meses" class="cal-meses"></div></section>' +
+      '<div id="cal_meses" class="cal-meses"></div></div></div></section>' +
       '<section class="cal-subpanel"' + panelAttrs("informe") + ">" +
       '<form class="cal-form" onsubmit="return false">' +
       '<label>Identificador del paciente (opcional, no se guarda) <input id="cal_paciente" type="text" autocomplete="off"></label> ' +
