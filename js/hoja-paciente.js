@@ -140,7 +140,7 @@
     var recortado = cicloRecortado(schedule);
     events.forEach(function (e) {
       if (e.lugar === "hospital") return;
-      var gk = [e.farmaco, e.dosis, e.veces, e.lugar].join("|");
+      var gk = [e.farmaco, e.dosis, e.veces, (e.horas || []).join(","), e.lugar].join("|");
       if (!groups[gk]) { groups[gk] = { e: e, byCycle: {}, cycleOrder: [] }; order.push(gk); }
       var G = groups[gk], c = String(e.cycle);
       if (!G.byCycle[c]) { G.byCycle[c] = []; G.cycleOrder.push(c); }
@@ -165,7 +165,7 @@
         var txt = intervalo ? P.txt : fmtDays(P.days) + (patOrder.length > 1 ? " (" + fmtCycles(P.cycles) + ")" : "");
         rows.push({
           farmaco: e.farmaco, dosis: e.dosis,
-          veces: e.veces + (Number(e.veces) === 1 ? " vez al día" : " veces al día"),
+          veces: e.veces + (Number(e.veces) === 1 ? " vez al día" : " veces al día") + (e.horas && e.horas.length ? " (" + listaHoras(e.horas) + ")" : ""),
           dias: txt, donde: lugarLargo(e.lugar)
         });
       });
@@ -179,7 +179,7 @@
     g.dates.forEach(function (d) {
       var hs = g.map[d].filter(function (e) { return e.lugar === "hospital"; });
       if (!hs.length) return;
-      out.push({ date: d, meds: uniq(hs.map(function (e) { return e.farmaco; })).join(", "), aviso: esFinde(d) || !!festivo(d) });
+      out.push({ date: d, meds: uniq(hs.map(function (e) { return e.farmaco + (e.horas && e.horas.length ? " (" + listaHoras(e.horas) + ")" : ""); })).join(", "), aviso: esFinde(d) || !!festivo(d) });
     });
     return out;
   }
@@ -299,11 +299,28 @@
     return h + "</section>";
   }
 
+  // ---------------------------------------------------------------- horas de las tomas
+  // ["08:00"] -> "08:00"; ["08:00","20:00"] -> "08:00 y 20:00"; 3+ -> "08:00, 14:00 y 22:00"
+  function listaHoras(hs) {
+    if (!hs || !hs.length) return "";
+    return hs.length === 1 ? hs[0] : hs.slice(0, -1).join(", ") + " y " + hs[hs.length - 1];
+  }
+  function hora0(e) { return e.horas && e.horas.length ? e.horas[0] : "99:99"; }
+  // Texto de las tomas de un día: «» · «(2 veces al día)» · «(a las 08:00)» · «(2 veces al día: 08:00 y 20:00)»
+  function textoTomas(e) {
+    var hs = e.horas && e.horas.length ? e.horas : [];
+    var n = Number(e.veces);
+    if (hs.length && n > 1) return " (" + n + " veces al día: " + listaHoras(hs) + ")";
+    if (hs.length) return " (a las " + hs[0] + ")";
+    return n > 1 ? " (" + n + " veces al día)" : "";
+  }
+
   // ---------------------------------------------------------------- portada
   function proximas(events, first, hoy, presupuesto) {
     var desde = first && first > hoy ? first : hoy;
     var list = events.filter(function (e) { return e.date >= desde; }).sort(function (a, b) {
       if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+      if (hora0(a) !== hora0(b)) return hora0(a) < hora0(b) ? -1 : 1;
       var x = String(a.farmaco), y = String(b.farmaco);
       return x < y ? -1 : x > y ? 1 : 0;
     }).slice(0, MAX_PROX);
@@ -313,7 +330,7 @@
     // La portada es una sola hoja: si las tarjetas no caben en el espacio estimado, se muestran menos fechas.
     if (presupuesto) {
       var alto = function (d) {
-        var n = g.map[d].reduce(function (t, e) { return t + lineas(e.farmaco + " " + e.dosis + (e.etiqueta ? " " + e.etiqueta : ""), 30); }, 0);
+        var n = g.map[d].reduce(function (t, e) { return t + lineas(e.farmaco + " " + e.dosis + textoTomas(e) + (e.etiqueta ? " " + e.etiqueta : ""), 30); }, 0);
         return Math.max(15.5, 5 + n * 4.4);
       };
       var usado = 0, k = 0;
@@ -338,7 +355,7 @@
       evs.forEach(function (e) {
         var otro = (hosp && e.lugar !== "hospital") || (!hosp && lugares.length > 1);
         out += '<li class="hoja-prox-med"><b>' + esc(e.farmaco) + "</b> " + esc(e.dosis) +
-          (Number(e.veces) > 1 ? " (" + esc(e.veces) + " veces al día)" : "") +
+          esc(textoTomas(e)) +
           (e.etiqueta ? " " + esc(e.etiqueta) : "") +
           (otro ? ' <span class="hoja-prox-lugar">· ' + esc(lugarLargo(e.lugar).toLowerCase()) + "</span>" : "") + "</li>";
       });

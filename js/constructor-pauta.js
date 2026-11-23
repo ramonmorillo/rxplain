@@ -47,6 +47,24 @@
     return out;
   }
 
+  // "08:00, 20:00" · "8:00 y 20.30" · ["08:00","20:00"] -> ["08:00","20:00"] (ordenadas). Lanza si no son horas 24 h.
+  var MAX_HORAS = 6;
+  function parseHoras(v, nombre) {
+    var trozos = Array.isArray(v) ? v.map(String) : txt(v).replace(/\s+y\s+/gi, ",").split(/[,;]|\s+/);
+    var out = [];
+    trozos.forEach(function (t) {
+      t = t.trim();
+      if (!t) return;
+      var m = /^([01]?\d|2[0-3])[:.]([0-5]\d)$/.exec(t);
+      if (!m) fail("«" + t + "» no es una hora válida en " + nombre + " (use formato 24 h, por ejemplo 08:00 o 20:30).");
+      out.push((m[1].length === 1 ? "0" : "") + m[1] + ":" + m[2]);
+    });
+    out.sort();
+    out.forEach(function (h, i) { if (i > 0 && h === out[i - 1]) fail("La hora " + h + " de " + nombre + " está repetida."); });
+    if (out.length > MAX_HORAS) fail("Como máximo " + MAX_HORAS + " horas al día en " + nombre + ".");
+    return out;
+  }
+
   function checkDias(dias, max, nombre) {
     if (!Array.isArray(dias) || !dias.length) fail("Indique al menos un día para " + nombre + ".");
     var prev = null;
@@ -84,7 +102,17 @@
         fail("Las veces al día de " + farmaco + " deben ser un entero entre 1 y 6.");
       }
     }
-    var out = { farmaco: farmaco, abrev: abrev, dosis: dosis, lugar: it.lugar, veces_al_dia: veces };
+    // Horas opcionales: nunca se inventan. Si se indican, deben cuadrar con las veces al día (o fijarlas si no se dieron).
+    var horas = parseHoras(it.horas, farmaco);
+    if (horas.length) {
+      var explicita = it.veces_al_dia !== undefined && it.veces_al_dia !== null && txt(it.veces_al_dia) !== "";
+      if (explicita && veces !== horas.length) {
+        fail("Las horas de " + farmaco + " (" + horas.length + ") no coinciden con las veces al día (" + veces + "): indique " +
+          horas.length + " veces al día o ajuste las horas.");
+      }
+      veces = horas.length;
+    }
+    var out = { farmaco: farmaco, abrev: abrev, dosis: dosis, lugar: it.lugar, veces_al_dia: veces, horas: horas };
     if (tipo === "ciclos") {
       checkDias(it.dias, cicloDias, farmaco);
       out.dias = it.dias.slice();
@@ -193,6 +221,6 @@
 
   return {
     LUGARES: LUGARES, FUENTE: FUENTE, EJEMPLOS: EJEMPLOS,
-    parseDias: parseDias, formFromText: formFromText, buildRegimen: buildRegimen
+    parseDias: parseDias, parseHoras: parseHoras, formFromText: formFromText, buildRegimen: buildRegimen
   };
 });
