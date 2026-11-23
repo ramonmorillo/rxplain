@@ -111,6 +111,7 @@
             abrev: it.abrev,
             dosis: it.dosis,
             veces: it.veces_al_dia === undefined || it.veces_al_dia === null ? 1 : it.veces_al_dia,
+            horas: Array.isArray(it.horas) ? it.horas.slice() : [],
             lugar: it.lugar,
             etiqueta: it.etiqueta || ""
           });
@@ -148,6 +149,7 @@
           abrev: it.abrev,
           dosis: it.dosis,
           veces: it.veces_al_dia === undefined || it.veces_al_dia === null ? 1 : it.veces_al_dia,
+            horas: Array.isArray(it.horas) ? it.horas.slice() : [],
           lugar: it.lugar,
           etiqueta: it.etiqueta || ""
         });

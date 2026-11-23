@@ -279,3 +279,6 @@
 .cb-prop{display:inline-flex;flex-direction:row;align-items:center;gap:6px;font-weight:600}
 .cb-prop[hidden]{display:none}
 .cb-prop select{max-width:100%;font:inherit;padding:4px 6px}
+
+/* Horas de las tomas en la celda del calendario */
+.dia .horas{display:block;font-size:.58rem;line-height:1.2;color:var(--muted);font-weight:600;word-break:break-word}

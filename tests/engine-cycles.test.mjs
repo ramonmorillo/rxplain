@@ -21,7 +21,7 @@ test("eventos de Dara en C1 y forma del evento", () => {
   assert.deepEqual(dara(r, 1).map((e) => e.date), ["2026-11-23", "2026-11-30", "2026-12-07", "2026-12-14"]);
   assert.deepEqual(dara(r, 1)[1], {
     date: "2026-11-30", cycle: 1, day: 8, farmaco: "Dara", abrev: "D",
-    dosis: "dosis-texto-D", veces: 1, lugar: "hospital", etiqueta: ""
+    dosis: "dosis-texto-D", veces: 1, horas: [], lugar: "hospital", etiqueta: ""
   });
   const len = r.events.find((e) => e.farmaco === "Len");
   assert.equal(len.etiqueta, "diario");

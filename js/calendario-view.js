@@ -69,9 +69,16 @@
       html += '<span class="ciclo-ini" data-ciclo-inicio="' + cycleStart.n + '" data-date="' + iso + '">C' + cycleStart.n + "</span>";
     }
     if (hospital) html += '<span class="etq-hospital"><span class="etq-largo">HOSPITAL</span><span class="etq-corto" aria-hidden="true">HOSP.</span></span>';
-    evs.forEach(function (e) {
-      var tip = e.farmaco + " · " + e.dosis + (e.veces > 1 ? " · " + e.veces + " veces al día" : "") + (e.etiqueta ? " · " + e.etiqueta : "");
+    // Dentro del día: por hora de la primera toma (las que no tienen hora, al final y en su orden).
+    var hora0 = function (e) { return e.horas && e.horas.length ? e.horas[0] : "99:99"; };
+    evs.slice().sort(function (a, b) { var x = hora0(a), y = hora0(b); return x < y ? -1 : x > y ? 1 : 0; }).forEach(function (e) {
+      var hs = e.horas && e.horas.length ? e.horas : [];
+      var tip = e.farmaco + " · " + e.dosis + (e.veces > 1 ? " · " + e.veces + " veces al día" : "") +
+        (hs.length ? " · a las " + hs.join(" y ") : "") + (e.etiqueta ? " · " + e.etiqueta : "");
       html += '<span class="pildora lugar-' + esc(e.lugar) + '" title="' + esc(tip) + '">' + esc(e.abrev) + "</span>";
+      // Horas visibles en la celda (el tooltip no existe en pantallas táctiles); sin horas, «×N» si hay varias tomas.
+      if (hs.length) html += '<span class="horas">' + hs.map(esc).join(" ") + "</span>";
+      else if (e.veces > 1) html += '<span class="horas">×' + esc(e.veces) + "</span>";
     });
     return html + "</div>";
   }
@@ -425,6 +432,7 @@
         '<label>Dosis (texto libre) <input type="text" data-f="dosis" autocomplete="off" placeholder="p. ej. 40 mg"></label>' +
         '<label>Lugar <select data-f="lugar">' + lug.map(function (l) { return opt(l[0], l[1]); }).join("") + "</select></label>" +
         '<label>Veces al día (1–6) <input type="text" data-f="veces_al_dia" inputmode="numeric" value="1"></label>' +
+        '<label>Horas (opcional) <input type="text" data-f="horas" autocomplete="off" placeholder="08:00, 20:00"></label>' +
         '<label class="cb-ciclos">Días del ciclo (1 = primer día del ciclo) <input type="text" data-f="dias" autocomplete="off" placeholder="1-21 o 1,8,15"></label>' +
         '<label class="cb-intervalo">Dosis iniciales: días desde el inicio (0 = día de inicio) <input type="text" data-f="desplazamientos_dias" autocomplete="off" placeholder="0,14,28"></label>' +
         '<label class="cb-intervalo">Primer mantenimiento: días desde el inicio (0 = día de inicio) <input type="text" data-f="primer_mantenimiento_dia" inputmode="numeric" placeholder="56"></label>' +
@@ -510,7 +518,15 @@
     }
 
     function onPauta() { recompute(); paint(true); }
-    pautaEl.addEventListener("input", onPauta);
+    // Al escribir las horas, «veces al día» pasa a ser su número (se puede corregir después; si no cuadran, se avisa).
+    function sincronizarVeces(t) {
+      if (!t || !t.getAttribute || t.getAttribute("data-f") !== "horas") return;
+      var n = 0;
+      try { n = B.parseHoras(t.value, "").length; } catch (e) { return; }
+      var v = t.closest(".cb-item").querySelector('[data-f="veces_al_dia"]');
+      if (n > 0 && v) v.value = String(n);
+    }
+    pautaEl.addEventListener("input", function (e) { sincronizarVeces(e.target); onPauta(); });
     pautaEl.addEventListener("change", function (e) {
       if (e.target && e.target.id === "cb_tipo") applyTipo();
       onPauta();
