@@ -280,6 +280,45 @@
       return out;
     }
 
+    // Sin esquemas que coincidan: el catálogo es limitado, así que se ofrecen dos salidas
+    // (buscar el fármaco en CIMA o crear una pauta propia) en lugar de dejar el selector vacío.
+    // No se inventa ningún esquema ni se busca nada solo: CIMA se consulta al pulsar «Buscar».
+    function salidasSinResultados(mostrar) {
+      var box = root.querySelector("#cal_sin_salidas");
+      if (!mostrar) { if (box && box.parentNode) box.parentNode.removeChild(box); return; }
+      if (!box) {
+        box = document.createElement("div");
+        box.id = "cal_sin_salidas";
+        selEl.parentNode.parentNode.appendChild(box);
+      }
+      box.textContent = "";
+      var q = buscarEl.value.trim();
+      var p = document.createElement("p");
+      p.textContent = "El catálogo solo incluye los esquemas ya cargados en la herramienta" +
+        (q ? " y no tiene ninguno para «" + q + "»" : "") + ". Puede:";
+      box.appendChild(p);
+      if (window.RxFarmacos && window.RxCima) {
+        var bc = document.createElement("button");
+        bc.type = "button"; bc.id = "cal_sin_cima"; bc.className = "btn btn-sec";
+        bc.textContent = q ? "Buscar «" + q + "» en CIMA" : "Buscar un fármaco en CIMA";
+        bc.addEventListener("click", function () {
+          var f = document.getElementById("far_buscar");
+          if (f) { f.value = q; }
+          goSub("farmacos");
+          if (f && f.focus) f.focus();
+        });
+        box.appendChild(bc);
+        box.appendChild(document.createTextNode(" "));
+      }
+      if (canBuild) {
+        var bn = document.createElement("button");
+        bn.type = "button"; bn.id = "cal_sin_crear"; bn.className = "btn btn-sec";
+        bn.textContent = "Crear pauta propia";
+        bn.addEventListener("click", function () { if (consBtn && consEl.hidden) consBtn.click(); });
+        box.appendChild(bn);
+      }
+    }
+
     // Reconstruye las <option> de #cal_esquema. Devuelve true si cambió el esquema seleccionado.
     function refilter() {
       var prev = selEl.value;
@@ -303,6 +342,7 @@
       } else if (ids.length && msg) {
         msg.parentNode.removeChild(msg);
       }
+      salidasSinResultados(!ids.length);
       return selEl.value !== prev;
     }
 

@@ -214,6 +214,8 @@
 .cal-selector{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:flex-end}
 .cal-selector input[type="search"],.cal-selector select{max-width:100%}
 #cal_sin_resultados{flex-basis:100%;margin:0;font-weight:600;color:var(--muted)}
+#cal_sin_salidas{flex-basis:100%}
+#cal_sin_salidas p{margin:.25rem 0}
 
 /* Constructor de pautas propias */
 .cal-constructor{margin:14px 0;padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm)}

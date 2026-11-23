@@ -359,3 +359,35 @@ test("I-1: al cambiar el nº de ciclos los campos de retraso se ajustan y conser
   assert.equal(d.getElementById("cal_retrasos").hidden, true);
   dom.window.close();
 });
+
+test("sin esquemas que coincidan: ofrece buscar en CIMA (precarga el nombre) y crear pauta propia", async () => {
+  const dom = await loadPage();
+  const d = dom.window.document;
+  setValue(dom, d.getElementById("cal_buscar"), "adalimumab");
+  assert.equal(d.querySelectorAll("#cal_esquema option").length, 0);
+  const box = d.getElementById("cal_sin_salidas");
+  assert.ok(box);
+  assert.match(box.textContent, /no tiene ninguno para «adalimumab»/);
+  const cima = d.getElementById("cal_sin_cima");
+  assert.match(cima.textContent, /adalimumab/);
+  cima.click();
+  assert.equal(d.getElementById("far_buscar").value, "adalimumab");
+  assert.equal(d.getElementById("sub-farmacos").hidden, false);
+  assert.equal(d.getElementById("sub-calendario").hidden, true);
+  // no se consulta CIMA solo: no hay resultados ni estado de búsqueda
+  assert.equal(d.querySelectorAll("#far_resultados li").length, 0);
+  assert.equal(d.getElementById("far_estado").textContent, "");
+  dom.window.RxSubtabs.show("esquemas");
+  assert.equal(d.getElementById("cal_constructor").hidden, true);
+  d.getElementById("cal_sin_crear").click();
+  assert.equal(d.getElementById("cal_constructor").hidden, false);
+  assert.ok(d.getElementById("cb_nombre"));
+  // el texto del usuario se inserta como texto, no como HTML
+  setValue(dom, d.getElementById("cal_buscar"), "<img src=x onerror=alert(1)>");
+  assert.equal(d.querySelector("#cal_sin_salidas img"), null);
+  // al volver a coincidir desaparecen las salidas
+  setValue(dom, d.getElementById("cal_buscar"), "");
+  assert.equal(d.getElementById("cal_sin_salidas"), null);
+  assert.deepEqual(dom.errors, []);
+  dom.window.close();
+});
