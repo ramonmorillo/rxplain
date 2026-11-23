@@ -2,6 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { loadPage } from "./helpers/loadPage.mjs";
+import { definirPauta, setValue, PAUTA_REF } from "./helpers/pauta.mjs";
+import { drd, isaKd } from "./fixtures/regimens-mieloma.mjs";
 
 const require = createRequire(import.meta.url);
 const { buildSheetHTML } = require("../js/hoja-paciente.js");
@@ -47,10 +49,9 @@ test("banner en cada página impresa si no está validado", () => {
   assert.ok(!v.includes("aviso-pendiente"));
 });
 
+// DRd multifase (fixture): la pauta por formulario solo admite una fase, así que se llama al motor directamente.
 const drdSched = () => {
-  const RxData = require("../js/regimen-data.js");
-  require("../data/regimens/mieloma-drd.js");
-  const r = RxData.get("mieloma-drd");
+  const r = drd;
   return { r, s: globalThis.RxEngine.buildSchedule(r, { start: "2026-11-23", n: 6 }) };
 };
 
@@ -94,8 +95,7 @@ test("hospital: HOSPITAL en texto, fármaco y lugar como texto", () => {
 async function fill(dom) {
   const d = dom.window.document;
   const set = (id, v, t = "input") => { const e = d.getElementById(id); e.value = v; e.dispatchEvent(new dom.window.Event(t, { bubbles: true })); };
-  set("cal_esquema", "mieloma-drd", "change");
-  set("cal_inicio", "2026-11-23", "change");
+  definirPauta(dom, { ...PAUTA_REF, inicio: "2026-11-23" });
   set("cal_paciente", "Paciente Secreto");
   set("pharm_name", "Farm"); set("center", "Centro"); set("contact", "123"); set("date", "1 ene");
   return d;
@@ -343,10 +343,8 @@ test("I1: cada página empieza con el aviso; las tablas no llevan aviso propio",
   }
 });
 
-test("I1: mieloma-isa-kd 12 ciclos pendiente -> aviso y número de hoja en todas las páginas", () => {
-  const RxData = require("../js/regimen-data.js");
-  require("../data/regimens/mieloma-isa-kd.js");
-  const r = { ...RxData.get("mieloma-isa-kd"), estado: "pendiente" };
+test("I1: isa-Kd (fixture) 12 ciclos pendiente -> aviso y número de hoja en todas las páginas", () => {
+  const r = { ...isaKd, estado: "pendiente" };
   const s = globalThis.RxEngine.buildSchedule(r, { start: "2026-11-23", n: 12 });
   const h = buildSheetHTML(s, r, vacio);
   const paginas = h.split('<section class="hoja-pagina ').slice(1);
@@ -454,4 +452,27 @@ test("0 eventos: portada y resumen sin calendario ni errores", () => {
   const h = buildSheetHTML({ cycles: [], events: [], end: "2026-11-23" }, regimen("pendiente"), vacio);
   assert.ok(h.includes("0 administraciones") && h.includes("No hay visitas al hospital") && h.includes("No hay medicación para tomar en casa"));
   assert.equal(count(h, BANNER), pags(h).length);
+});
+
+test("casilla de validación: sin marcar, hoja y vista previa llevan el banner; marcada, no", async () => {
+  const dom = await loadPage();
+  const d = await fill(dom);
+  const prev = d.getElementById("informe_preview");
+  assert.equal(d.getElementById("cb_validada").checked, false);
+  assert.ok(prev.innerHTML.includes(BANNER) && prev.innerHTML.includes("aviso-pendiente"));
+  dom.window.print = () => {};
+  d.getElementById("cal_imprimir").click();
+  assert.ok(d.getElementById("hojaPaciente").innerHTML.includes(BANNER));
+  dom.window.dispatchEvent(new dom.window.Event("afterprint"));
+  setValue(dom, d.getElementById("cb_validada"), true, "change");
+  assert.ok(prev.innerHTML.includes("hoja-mes"), "la vista previa sigue pintada");
+  assert.ok(!prev.innerHTML.includes(BANNER) && !prev.innerHTML.includes("aviso-pendiente"));
+  d.getElementById("cal_imprimir").click();
+  assert.ok(!d.getElementById("hojaPaciente").innerHTML.includes(BANNER));
+  assert.ok(d.getElementById("hojaPaciente").innerHTML.includes("hoja-mes"));
+  dom.window.dispatchEvent(new dom.window.Event("afterprint"));
+  setValue(dom, d.getElementById("cb_validada"), false, "change");
+  assert.ok(prev.innerHTML.includes(BANNER));
+  assert.deepEqual(dom.errors, []);
+  dom.window.close();
 });

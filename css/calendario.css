@@ -217,11 +217,6 @@
 .pildora.lugar-casa,.pildora.lugar-casa_inyeccion{background:var(--muted)}
 
 /* Selector con buscador y filtro por área */
-.cal-selector{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:flex-end}
-.cal-selector input[type="search"],.cal-selector select{max-width:100%}
-#cal_sin_resultados{flex-basis:100%;margin:0;font-weight:600;color:var(--muted)}
-#cal_sin_salidas{flex-basis:100%}
-#cal_sin_salidas p{margin:.25rem 0}
 
 /* Constructor de pautas propias */
 .cal-constructor{margin:14px 0;padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm)}
@@ -231,8 +226,9 @@
 .cb-item{padding:10px;border:1px dashed var(--border);border-radius:var(--radius-sm)}
 .cal-constructor label{display:flex;flex-direction:column;gap:4px;font-weight:600;font-size:.9rem}
 .cal-constructor input,.cal-constructor select{font:inherit;padding:6px 8px;border:1px solid var(--border);border-radius:6px}
-.cb-error:empty{display:none}
-.cb-error{background:#fde8e8;border-color:#c0392b}
+.cb-estado{margin:6px 0 0;color:var(--muted);font-weight:600}
+.cb-estado:empty{display:none}
+.cb-origen{margin:0 0 10px}
 .btn-sec{background:var(--surface);color:var(--primary);border:1px solid var(--primary)}
 
 /* Sub-pestañas del Calendario */
@@ -256,8 +252,8 @@
 .far-texto:empty{display:none}
 
 /* Pauta indefinida y contacto del informe */
-.cal-form label.cal-check,.cb-indef{flex-direction:row;align-items:center;font-weight:600}
-.cal-form label.cal-check input,.cb-indef input{padding:0}
+.cal-form label.cal-check,.cal-constructor label.cb-indef{flex-direction:row;align-items:center;font-weight:600}
+.cal-form label.cal-check input,.cal-constructor label.cb-indef input{padding:0}
 .aviso-recorte{border:3px solid #000;font-weight:600}
 
 /* Empezar de nuevo (confirmación en línea) */

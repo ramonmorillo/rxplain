@@ -1,8 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { loadPage } from "./helpers/loadPage.mjs";
+import { definirPauta, PAUTA_REF } from "./helpers/pauta.mjs";
 
-const NAMES = ["farmacos", "esquemas", "calendario", "informe"];
+const NAMES = ["farmacos", "calendario", "informe"];
 
 function visible(d) {
   return NAMES.filter((n) => !d.getElementById("sub-" + n).hidden);
@@ -32,6 +33,8 @@ test("clic en cada sub-pestaña deja visible solo ese panel", async () => {
   }
   dom.window.RxSubtabs.show("inexistente");
   assert.deepEqual(visible(d), ["informe"]);
+  dom.window.RxSubtabs.show("esquemas"); // ya no existe: no cambia nada
+  assert.deepEqual(visible(d), ["informe"]);
   dom.window.close();
 });
 
@@ -47,52 +50,60 @@ test("flechas mueven foco y selección con vuelta circular", async () => {
   assert.equal(d.activeElement, b("farmacos"));
   key(dom, b("farmacos"), "ArrowLeft");
   assert.equal(d.activeElement, b("informe"));
+  key(dom, b("informe"), "ArrowLeft");
+  assert.equal(d.activeElement, b("calendario"));
+  key(dom, b("calendario"), "ArrowLeft");
+  assert.equal(d.activeElement, b("farmacos"));
+  key(dom, b("farmacos"), "ArrowRight");
+  assert.equal(d.activeElement, b("calendario"));
+  assert.deepEqual(visible(d), ["calendario"]);
   dom.window.close();
 });
 
-test("todos los ids anteriores siguen en el DOM y Fármacos muestra Próximamente", async () => {
+test("solo existen las sub-pestañas Fármacos, Calendario e Informe", async () => {
   const dom = await loadPage();
   const d = dom.window.document;
-  for (const id of ["cal_esquema", "cal_buscar", "cal_area", "cal_inicio", "cal_ciclos", "cal_retrasos",
-    "cal_avisos", "cal_meses", "cal_paciente", "cal_imprimir", "cal_constructor", "cal_nueva"]) {
+  assert.deepEqual(
+    [...d.querySelectorAll("#subtabs [role=tab]")].map((b) => b.id.replace("sub-btn-", "")), NAMES);
+  assert.deepEqual(Array.from(dom.window.RxSubtabs.NAMES), NAMES);
+  assert.equal(d.getElementById("sub-btn-esquemas"), null);
+  assert.equal(d.getElementById("sub-esquemas"), null);
+  dom.window.close();
+});
+
+test("ids principales en su sub-pestaña y Fármacos muestra su raíz", async () => {
+  const dom = await loadPage();
+  const d = dom.window.document;
+  for (const id of ["cal_pauta", "cb_nombre", "cb_tipo", "cb_items", "cb_validada", "cb_estado", "cal_inicio",
+    "cal_ciclos", "cal_retrasos", "cal_avisos", "cal_meses", "cal_paciente", "cal_imprimir"]) {
     assert.ok(d.getElementById(id), id);
   }
-  assert.ok(d.querySelector("#sub-esquemas #cal_esquema"));
-  assert.ok(d.querySelector("#sub-esquemas #cal_constructor"));
+  for (const id of ["cal_esquema", "cal_buscar", "cal_area", "cal_constructor", "cal_nueva", "cal_cambiar"]) {
+    assert.equal(d.getElementById(id), null, id);
+  }
+  assert.ok(d.querySelector("#sub-calendario #cal_pauta"));
+  assert.ok(d.querySelector("#sub-calendario #cal_inicio"));
   assert.ok(d.querySelector("#sub-calendario #cal_meses"));
   assert.ok(d.querySelector("#sub-informe #cal_imprimir"));
   assert.ok(d.querySelector("#sub-farmacos #farmacos_root"));
   dom.window.close();
 });
 
-test("Cambiar esquema lleva a Esquemas; elegir esquema mantiene la sub-pestaña", async () => {
+test("precargar desde otra sub-pestaña lleva a Calendario", async () => {
   const dom = await loadPage();
   const d = dom.window.document;
-  d.getElementById("cal_cambiar").click();
-  assert.deepEqual(visible(d), ["esquemas"]);
-  const sel = d.getElementById("cal_esquema");
-  sel.value = sel.options[sel.options.length - 1].value;
-  sel.dispatchEvent(new dom.window.Event("change", { bubbles: true }));
-  assert.deepEqual(visible(d), ["esquemas"]);
-  assert.match(d.getElementById("cal_resumen_txt").textContent, /pendiente|validado/);
-  dom.window.close();
-});
-
-test("crear pauta propia pasa a Calendario", async () => {
-  const dom = await loadPage();
-  const d = dom.window.document;
-  d.getElementById("sub-btn-esquemas").click();
-  d.getElementById("cal_nueva").click();
+  d.getElementById("sub-btn-informe").click();
+  assert.deepEqual(visible(d), ["informe"]);
   d.getElementById("cal_ej_bio").click();
-  d.getElementById("cb_crear").click();
-  assert.equal(d.getElementById("cb_error").textContent, "");
+  assert.deepEqual(visible(d), ["informe"], "los ejemplos no cambian de sub-pestaña");
+  dom.window.RxCalendar.precargar(dom.window.RxBuilder.EJEMPLOS.biologico());
   assert.deepEqual(visible(d), ["calendario"]);
   dom.window.close();
 });
 
 test("imprimir desde Informe construye la hoja; Infografía limpia como antes", async () => {
   const dom = await loadPage({ beforeParse(w) { w.print = () => {}; } });
-  const d = dom.window.document;
+  const d = definirPauta(dom, { ...PAUTA_REF, inicio: "2026-11-23", n: 2 });
   d.getElementById("sub-btn-informe").click();
   d.getElementById("cal_imprimir").click();
   assert.equal(d.body.dataset.printing, "calendario");
@@ -106,11 +117,24 @@ test("imprimir desde Informe construye la hoja; Infografía limpia como antes", 
 
 test("imprimir sin fecha desde Informe vuelve a Calendario con el aviso", async () => {
   const dom = await loadPage({ beforeParse(w) { w.print = () => {}; } });
-  const d = dom.window.document;
+  const d = definirPauta(dom, { ...PAUTA_REF, inicio: "2026-11-23", n: 2 });
   d.getElementById("cal_inicio").value = "";
   d.getElementById("sub-btn-informe").click();
   d.getElementById("cal_imprimir").click();
   assert.deepEqual(visible(d), ["calendario"]);
   assert.match(d.getElementById("cal_avisos").textContent, /fecha de inicio/);
+  assert.equal(d.body.dataset.printing, undefined);
+  dom.window.close();
+});
+
+test("imprimir sin pauta desde Informe vuelve a Calendario con el aviso de completarla", async () => {
+  const dom = await loadPage({ beforeParse(w) { w.print = () => {}; } });
+  const d = dom.window.document;
+  d.getElementById("sub-btn-informe").click();
+  d.getElementById("cal_imprimir").click();
+  assert.deepEqual(visible(d), ["calendario"]);
+  assert.match(d.getElementById("cal_avisos").textContent, /Complete la pauta/);
+  assert.equal(d.body.dataset.printing, undefined);
+  assert.deepEqual(dom.errors, []);
   dom.window.close();
 });
