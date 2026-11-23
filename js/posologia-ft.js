@@ -212,5 +212,46 @@
     return { propuestas: props, avisos: avisos };
   }
 
-  return { extraer: extraer };
+  // Convierte una propuesta de extraer() en el borrador que entiende la pestaña Calendario.
+  // med = { nombre, pactivos, nregistro }. Pura. Lo que la ficha no dice queda vacío (la dosis la escribe el farmacéutico).
+  // Pauta diaria sin ciclo = 28 días diarios con calendario indefinido (el ciclo solo agrupa);
+  // intervalo sin dosis iniciales («cada N días») = dosis el día 0 y repetición cada N días.
+  function aBorrador(p, med) {
+    med = med || {};
+    var farmaco = med.pactivos || med.nombre || "";
+    var it = { farmaco: farmaco, abrev: farmaco.slice(0, 4), dosis: "", lugar: "casa" };
+    var f = {
+      nombre: farmaco,
+      items: [it],
+      frase: p.frase || "",
+      origen: "Borrador de la ficha técnica de " + (med.nombre || farmaco) + " (nº reg. " + (med.nregistro || "—") +
+        "): revíselo y complételo; no sustituye la validación farmacéutica."
+    };
+    if (p.tipo === "intervalo") {
+      f.tipo = "intervalo";
+      f.n = 6;
+      it.desplazamientos_dias = (p.desplazamientos_dias || []).join(",");
+      it.primer_mantenimiento_dia = p.primer_mantenimiento_dia;
+      it.cada_dias = p.cada_dias;
+      if (!it.desplazamientos_dias && it.primer_mantenimiento_dia === "" && p.cada_dias) {
+        it.desplazamientos_dias = "0";
+        it.primer_mantenimiento_dia = p.cada_dias;
+      }
+    } else if (p.tipo === "diaria") {
+      f.tipo = "ciclos";
+      f.ciclo_dias = 28;
+      f.indefinida = true;
+      it.dias = "1-28";
+      it.veces_al_dia = p.veces_al_dia || "";
+    } else {
+      f.tipo = "ciclos";
+      f.n = 6;
+      f.ciclo_dias = p.ciclo_dias || "";
+      it.dias = p.dias_ciclo || "";
+      it.veces_al_dia = p.veces_al_dia || ""; // vacío = sin dato en la ficha
+    }
+    return f;
+  }
+
+  return { extraer: extraer, aBorrador: aBorrador };
 });

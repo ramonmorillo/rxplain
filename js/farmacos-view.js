@@ -65,43 +65,9 @@
       return t + ".";
     }
 
-    // Borrador para la pestaña Calendario. Una pauta diaria sin ciclo se representa como 28 días diarios
-    // con calendario indefinido (el ciclo solo agrupa); lo que la ficha no dice queda vacío para que lo indique el farmacéutico.
+    // Borrador para la pestaña Calendario (la conversión vive en RxPosologia.aBorrador).
     function usar(p) {
-      var s = selected || {};
-      var farmaco = s.pactivos || s.nombre || "";
-      var it = { farmaco: farmaco, abrev: farmaco.slice(0, 4), dosis: "", lugar: "casa" };
-      var f = {
-        nombre: farmaco,
-        items: [it],
-        origen: "Borrador de la ficha técnica de " + (s.nombre || farmaco) + " (nº reg. " + (s.nregistro || "—") +
-          "): revíselo y complételo; no sustituye la validación farmacéutica."
-      };
-      if (p.tipo === "intervalo") {
-        f.tipo = "intervalo";
-        f.n = 6;
-        it.desplazamientos_dias = (p.desplazamientos_dias || []).join(",");
-        it.primer_mantenimiento_dia = p.primer_mantenimiento_dia;
-        it.cada_dias = p.cada_dias;
-        // Sin dosis iniciales («cada N días» a secas): dosis el día de inicio y repetición cada N días.
-        if (!it.desplazamientos_dias && it.primer_mantenimiento_dia === "" && p.cada_dias) {
-          it.desplazamientos_dias = "0";
-          it.primer_mantenimiento_dia = p.cada_dias;
-        }
-      } else if (p.tipo === "diaria") {
-        f.tipo = "ciclos";
-        f.ciclo_dias = 28;
-        f.indefinida = true;
-        it.dias = "1-28";
-        it.veces_al_dia = p.veces_al_dia || "";
-      } else {
-        f.tipo = "ciclos";
-        f.n = 6;
-        f.ciclo_dias = p.ciclo_dias || "";
-        it.dias = p.dias_ciclo || "";
-        it.veces_al_dia = p.veces_al_dia || ""; // vacío = sin dato en la ficha
-      }
-      if (window.RxCalendar) window.RxCalendar.precargar(f);
+      if (window.RxCalendar) window.RxCalendar.precargar(window.RxPosologia.aBorrador(p, selected || {}));
     }
 
     function elegir(m, li) {
